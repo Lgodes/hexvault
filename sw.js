@@ -1,4 +1,4 @@
-const VERSION='hexvault-v130';
+const VERSION='hexvault-v131';
 const STATIC=[
   '/', '/index.html', '/manifest.webmanifest',
   '/logo4.png','/logo4-hd-transparent.png','/coin-epic.png','/d20-epic.png',
