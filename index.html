@@ -279,7 +279,7 @@ body{min-height:100dvh}
 <div class='settingsGroup'><div class='settingsLabel'>ACCESSIBILITY</div><div class='settingsPanel settingsRows'><label class='settingsRow'><span><b>Reduce motion</b><small>Reduce animated effects including coin and D20</small></span><input id='reduceMotion' type='checkbox'></label></div></div>
 <div class='settingsGroup'><div class='settingsLabel'>DATA & BACKUP</div><div class='settingsPanel'><div class='dataStatus'><span class='statusDot'></span><div><b>Stored on this device</b><div id='durableStorageText' class='muted small'>Checking durable local storage…</div></div></div><div class='settingsActionGrid'><button class='btn accent' onclick='exportBackup()'>Export backup</button><button class='btn' onclick="document.getElementById('restoreBackupInput').click()">Import backup</button><button class='btn' onclick='openRecentlyDeleted()'>Recently deleted</button><button class='btn' onclick='runDiagnostics()'>Diagnostics</button></div><input id='restoreBackupInput' type='file' accept='application/json,.json' style='display:none'><p id='backupStatus' class='muted small'></p></div></div>
 <div class='settingsGroup'><div class='settingsLabel'>SUPPORT</div><div class='settingsPanel'><div class='dataStatus'><span class='supportGlyph'>!</span><div><b>Found a problem?</b><div class='muted small'>Report it directly inside HexVault. The report is delivered to HexVault Support.</div></div></div><button class='btn accent wide supportReportButton' type='button' onclick='reportHexVaultProblem()'>Report a bug</button><p class='muted small supportPrivacy'>HexVault can include the current page, version, device/browser, connection status, and recent app errors. Cards, decks, wishlist, profile, and collection are never included.</p></div></div>
-<div class='settingsGroup'><div class='settingsLabel'>ABOUT</div><div class='settingsPanel settingsRows'><div class='settingsRow'><span><b>HexVault</b><small>Version 144 · PWA</small></span><span class='muted'>v144</span></div><div class='settingsRow'><span><b>Cloud sync</b><small>Not configured yet</small></span><span class='muted'>Local</span></div></div></div></section>
+<div class='settingsGroup'><div class='settingsLabel'>ABOUT</div><div class='settingsPanel settingsRows'><div class='settingsRow'><span><b>HexVault</b><small>Version 146 · PWA</small></span><span class='muted'>v146</span></div><div class='settingsRow'><span><b>Cloud sync</b><small>Not configured yet</small></span><span class='muted'>Local</span></div></div></div></section>
 <nav class='bottom'>
 <div class='nav on' onclick="go('home',this)"><span class='navIcon'><svg viewBox='0 0 24 24'><path d='M4 11.5 12 5l8 6.5v7.5a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z'/></svg></span>Home</div>
 <div class='nav' onclick="go('collection',this)"><span class='navIcon'><svg viewBox='0 0 24 24'><rect x='7' y='4' width='11' height='16' rx='2'/><path d='M7 7H5.5A1.5 1.5 0 0 0 4 8.5v9A1.5 1.5 0 0 0 5.5 19H7'/></svg></span>Collection</div>
@@ -325,14 +325,14 @@ window.addEventListener('DOMContentLoaded',function(){
   restoreIfNeeded();
 });
 </script>
-<style id="v144-last-style-bulk-start">
+<style id="v145-last-style-bulk-start">
 /* Final cascade guard: Bulk is manual for its first capture, then hands-free. */
 #scan .scanCameraStage.bulkActive:not(.bulkRunning) .scanShutter{display:flex!important}
 #scan .scanCameraStage.bulkActive:not(.bulkRunning) .bulkAutoStatus{display:none!important}
 #scan .scanCameraStage.bulkActive.bulkRunning .scanShutter{display:none!important}
 #scan .scanCameraStage.bulkActive.bulkRunning .bulkAutoStatus{display:block!important}
 </style>
-<style id="v144-final-bulk-first-scan-override">
+<style id="v145-final-bulk-first-scan-override">
 /* Must remain last: v77 originally hid the shutter in every Bulk state. */
 #scan .scanCameraStage.bulkActive:not(.bulkRunning) .scanShutter{display:flex!important}
 #scan .scanCameraStage.bulkActive:not(.bulkRunning) .bulkAutoStatus{display:none!important}
@@ -380,7 +380,7 @@ window.addEventListener('load',()=>{
  };
 })();
 </script>
-<script id="v144-bulk-first-scan">
+<script id="v145-bulk-first-scan">
 window.addEventListener('load',()=>{
  let bulkStarted=false,firstBulkPending=false;
  const stage=()=>document.querySelector('.scanCameraStage');
@@ -2177,7 +2177,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{con
  window.submitHexVaultBug=async function(event){
   event.preventDefault();const button=document.getElementById('bugSubmit'),status=document.getElementById('bugReportStatus');button.disabled=true;button.textContent='Sending…';status.className='bugReportStatus muted small';status.textContent='Sending securely to HexVault Support…';
   const include=document.getElementById('bugDiagnostics')?.checked;
-  const diagnostics=include?{page:currentPage(),version:'v144',device:navigator.userAgent,viewport:`${window.innerWidth} × ${window.innerHeight}`,online:navigator.onLine,errors:[...recentErrors]}:{};
+  const diagnostics=include?{page:currentPage(),version:'v146',device:navigator.userAgent,viewport:`${window.innerWidth} × ${window.innerHeight}`,online:navigator.onLine,errors:[...recentErrors]}:{};
   try{const response=await fetch('/api/report-bug',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:document.getElementById('bugCategory')?.value,description:document.getElementById('bugDescription')?.value,contact:document.getElementById('bugContact')?.value,diagnostics})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||'Could not send the report.');status.className='bugReportStatus success small';status.textContent='✓ Report sent to HexVault Support. Thank you!';button.textContent='Sent';setTimeout(()=>window.closeModal?.(),1600)}catch(error){status.className='bugReportStatus error small';status.textContent=error.message||'Could not send the report. Please try again.';button.disabled=false;button.textContent='Try again'}
  };
 })();
@@ -3118,17 +3118,17 @@ try{if(document.getElementById('deckedit')?.classList.contains('on')&&currentDec
   const quick=document.querySelector('#home .quickActions');if(quick&&!quick.querySelector('.quickMatchIcon')){quick.classList.add('v104QuickActions');const button=document.createElement('button');button.type='button';button.onclick=()=>window.openMatchHistory?.();button.innerHTML=`<span class="quickMatchIcon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 19v-6M9 19V9M14 19v-4M19 19V5M3 20h18M4 10l5-4 5 5 5-8"/></svg></span><b>Match Stats</b>`;quick.appendChild(button)}
 })();
 </script>
-<style id="v144-absolute-final-bulk-start">
+<style id="v145-absolute-final-bulk-start">
 /* Keep this as the final stylesheet: Bulk starts on a visible manual Scan button. */
 #scan .scanCameraStage.bulkActive:not(.bulkRunning) .scanShutter{display:flex!important}
 #scan .scanCameraStage.bulkActive:not(.bulkRunning) .bulkAutoStatus{display:none!important}
 #scan .scanCameraStage.bulkActive.bulkRunning .scanShutter{display:none!important}
 #scan .scanCameraStage.bulkActive.bulkRunning .bulkAutoStatus{display:block!important}
 </style>
-<style id="v144-offline-card-database-style">
+<style id="v145-offline-card-database-style">
 .offlineDbPanel{display:grid;gap:14px}.offlineDbDot{width:10px;height:10px;border-radius:50%;background:#596173;box-shadow:none;flex:none}.offlineDbDot.ready{background:#61d99d;box-shadow:0 0 12px #61d99d77}.offlineDbDot.busy{background:#ad83ff;box-shadow:0 0 12px #8a5cff99}.offlineDbDot.error{background:#ff7184}.offlineDbProgressWrap{display:none}.offlineDbProgressWrap.on{display:block}.offlineDbProgress{height:8px;border-radius:999px;overflow:hidden;background:#252d3e}.offlineDbProgress i{display:block;width:0;height:100%;background:linear-gradient(90deg,#704cff,#b17dff);transition:width .18s ease}.offlineDbProgressText{margin-top:7px}.offlineDbNote{line-height:1.5;margin:0}.offlineDbPanel button:disabled{opacity:.45;pointer-events:none}
 </style>
-<script id="v144-offline-card-database">
+<script id="v145-offline-card-database">
 /* Phone-safe local search index. Full records are cached progressively; images stay remote. */
 window.addEventListener('load',()=>{
  const DB='hexvault-card-db-v1',VERSION=1,NAMES='names',CARDS='cards',META='meta';let aborter=null,paused=false;
@@ -3150,11 +3150,11 @@ window.addEventListener('load',()=>{
  status();
 });
 </script>
-<script id="v144-single-pass-card-recognition">
+<script id="v145-single-pass-card-recognition">
 /* One captured frame, one recognition request, one Scryfall-verified result. */
 window.addEventListener('load',()=>{
  let recognizing=false,recognitionController=null;
- function captureCard(){const video=camera,vw=video.videoWidth,vh=video.videoHeight,portrait=vw/vh<.82,cropH=vh*.92,cropW=Math.min(vw*.86,cropH*.72),x=(vw-cropW)/2,y=(vh-cropH)/2,canvas=document.createElement('canvas'),max=900,scale=Math.min(1,max/cropW);canvas.width=Math.max(420,Math.round(cropW*scale));canvas.height=Math.max(580,Math.round(cropH*scale));canvas.getContext('2d',{alpha:false}).drawImage(video,x,y,cropW,cropH,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',.74)}
+ function captureCard(){const video=camera,vw=video.videoWidth,vh=video.videoHeight,cropH=vh*.92,cropW=Math.min(vw*.86,cropH*.72),x=(vw-cropW)/2,y=(vh-cropH)/2,canvas=document.createElement('canvas'),width=640,height=Math.round(width*cropH/cropW),ctx=canvas.getContext('2d',{alpha:false});canvas.width=width;canvas.height=Math.min(920,height);ctx.drawImage(video,x,y,cropW,cropH,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',.68)}
  function stage(text){scanStatus.textContent=text;cameraNote.textContent=text}
  function resetBulkFailure(){if(scannerKind!=='bulk')return;document.querySelector('.scanCameraStage')?.classList.remove('bulkRunning');window.stopBulkAuto?.();stage('Not found · tap Scan to retry')}
  window.cancelCardRecognition=function(){recognitionController?.abort();recognitionController=null;recognizing=false;resetBulkFailure()};
@@ -3166,14 +3166,27 @@ window.addEventListener('load',()=>{
   if(scannerKind==='bulk')document.querySelector('.scanCameraStage')?.classList.add('bulkRunning');
   const started=performance.now();
   try{
-   stage('Recognizing card…');const image=captureCard(),timeout=setTimeout(()=>recognitionController?.abort(),7500);
+   stage('Recognizing card, language and printing…');const image=captureCard(),timeout=setTimeout(()=>recognitionController?.abort(),6500);
    let response;try{response=await fetch('/api/recognize-card',{method:'POST',signal:recognitionController.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({image,language:lang||'auto',sets:selectedSets||[]})})}finally{clearTimeout(timeout)}
-   const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Card could not be recognized.');
-   const card=data.card,confidence=Math.max(0,Math.min(100,Number(data.detected?.confidence)||0));window._scanDetectedLanguage=data.detected?.language||card.lang||'';window._scanConfidenceByName={[card.name]:confidence};window._pendingScanConfidence=confidence;window._scanCandidateCards=[card];
-   window.HexVaultOfflineCards?.cacheCards?.([card]);
-   const elapsed=(performance.now()-started)/1000;stage(`Found ✓ · ${window._scanDetectedLanguage.toUpperCase()} · ${confidence}% · ${elapsed.toFixed(1)}s`);cameraNote.textContent='Found ✓';showSearchChoices([card]);
+   const data=await response.json().catch(()=>({}));if(!response.ok){const labels={400:'Captured image was rejected',401:'Recognition key rejected',404:'Recognition endpoint missing — deploy the complete ZIP',422:'Card could not be verified',429:'Recognition credit or rate limit',500:'Recognition service error',502:'Recognition model/API error',503:'Recognition is not configured in Vercel',504:'Recognition timed out'};throw Error(`${labels[response.status]||'Recognition failed'}${data.error?' · '+data.error:''}`)}
+   const card=data.card,alternatives=(data.alternatives||[]).filter(Boolean),choices=[card,...alternatives].filter((item,index,array)=>item?.id&&array.findIndex(other=>other.id===item.id)===index),confidence=Math.max(0,Math.min(100,Number(data.detected?.confidence)||0));window._scanDetectedLanguage=data.detected?.language||card.lang||'';window._scanConfidenceByName={[card.name]:confidence};alternatives.forEach(item=>window._scanConfidenceByName[item.name]=Math.min(confidence,55));window._pendingScanConfidence=confidence;window._scanCandidateCards=choices;
+   window.HexVaultOfflineCards?.cacheCards?.(choices);
+   const elapsed=(performance.now()-started)/1000,languageLabel=window._scanDetectedLanguage.toUpperCase();if(data.needs_confirmation){stage(`Check match · ${languageLabel} · ${elapsed.toFixed(1)}s`);cameraNote.textContent='Choose the correct card';showSearchChoices(choices)}else{stage(`Found ✓ · ${languageLabel} · ${confidence}% · ${elapsed.toFixed(1)}s`);cameraNote.textContent='Found ✓';showSearchChoices([card])}
   }catch(error){if(error.name==='AbortError')stage('Recognition stopped · tap Scan to retry');else stage((error.message||'Card not found')+' Tap Scan to retry.');resetBulkFailure()}
   finally{recognizing=false;recognitionController=null}
+ };
+ window.scanBinderPage=async function(){
+  if(binderBusy)return;if(!stream){await startCamera();if(!stream)return}const video=camera;if(!video?.videoWidth){stage('Camera is starting…');return}
+  binderBusy=true;const total=binderLayout.cols*binderLayout.rows;stage(`Recognizing ${total} binder pockets…`);
+  try{
+   const page=document.createElement('canvas'),context=page.getContext('2d',{alpha:false});page.width=video.videoWidth;page.height=video.videoHeight;context.drawImage(video,0,0,page.width,page.height);
+   const marginX=.055*page.width,marginY=.055*page.height,usableW=page.width-2*marginX,usableH=page.height-2*marginY,slotW=usableW/binderLayout.cols,slotH=usableH/binderLayout.rows,images=[];
+   for(let row=0;row<binderLayout.rows;row++)for(let col=0;col<binderLayout.cols;col++){const slot=document.createElement('canvas'),sx=marginX+col*slotW,sy=marginY+row*slotH;slot.width=360;slot.height=500;slot.getContext('2d',{alpha:false}).drawImage(page,sx,sy,slotW,slotH,0,0,slot.width,slot.height);images.push(slot.toDataURL('image/jpeg',.62))}
+   const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),11500);let response;try{response=await fetch('/api/recognize-card',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:'binder',images,language:lang||'auto',sets:selectedSets||[]})})}finally{clearTimeout(timeout)}
+   const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Binder recognition failed.');let found=0,review=0;
+   for(const result of data.cards||[]){if(!result.recognized||!result.card)continue;const card=result.card,confidence=Math.max(0,Math.min(100,Number(result.detected?.confidence)||0)),item={id:card.id,oracle_id:card.oracle_id,name:card.name,printed_name:card.printed_name||card.name,set:card.set,set_name:card.set_name,collector_number:card.collector_number||'',lang:result.detected?.language||card.lang||'en',finish:'nonfoil',image:cardImg(card),type_line:card.type_line||'',price_eur:parseFloat(card.prices?.eur||0)||0,qty:1,confidence,binder_slot:result.slot,added_at:new Date().toISOString()},old=batchQueue.find(existing=>batchKey(existing)===batchKey(item));old?old.qty++:batchQueue.push(item);found++;if(confidence<80)review++}
+   renderBatch();updateScanSessionBadge();stage(found?`Binder page · ${found} found${review?' · '+review+' need review':''}`:'No safe matches · reduce glare or move closer');cameraNote.textContent=found?'Binder page found ✓':'No safe matches';
+  }catch(error){stage(error.name==='AbortError'?'Binder recognition timed out · try fewer pockets':(error.message||'Binder recognition failed'));cameraNote.textContent='Try again'}finally{binderBusy=false}
  };
 });
 </script>

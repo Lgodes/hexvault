@@ -27,6 +27,15 @@ function parseJudgeOutput(value=''){
   if(start>=0&&end>start)return JSON.parse(text.slice(start,end+1));
   throw new Error('No JSON object in Judge response');
 }
+function normalizeJudgeOutput(value={}){
+  const out=value&&typeof value==='object'?value:{};
+  const text=v=>typeof v==='string'?v.trim():'';
+  const quick=text(out.quick)||text(out.quick_answer)||text(out.answer)||text(out.ruling)||text(out.summary);
+  const explain=text(out.explain)||text(out.explanation)||text(out.reasoning)||text(out.details);
+  const judgeDetail=text(out.judgeDetail)||text(out.judge_detail)||text(out.technical_detail)||text(out.technical);
+  const clarification=text(out.clarification)||text(out.clarifying_question);
+  return {status:(out.status==='clarify'||(!quick&&clarification))?'clarify':'answer',quick,clarification,explain,judgeDetail,references:Array.isArray(out.references)?out.references:[]};
+}
 function decodeHtml(s=''){return s.replace(/&amp;/g,'&').replace(/&#x2F;/gi,'/').replace(/&quot;/g,'"').replace(/&#39;/g,"'")}
 async function fetchText(url){const r=await fetch(url,{headers:{'user-agent':'HexVaultRules/2.0 (+rules assistant)'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return (await r.text()).slice(0,MAX_SOURCE)}
 async function currentComprehensiveRules(){
@@ -71,6 +80,8 @@ export async function handler(event){
 AUTHORITATIVE ORDER: (1) supplied current Wizards Comprehensive Rules excerpts, (2) supplied official tournament-policy excerpts when present, (3) supplied current Oracle text for attached cards. Never invent a rule number or source. Understand natural language, informal card descriptions, paraphrases, spelling mistakes, and terminology in the user's language; do not require the player to quote an official rule or use an exact formula.
 WEB RESEARCH: Use web search when it can find a closely related ruling or interaction. Prefer official Wizards pages, Oracle/Gatherer-style rulings, established judge resources, and well-supported community discussions. Community answers are supporting context only and never override official rules or Oracle text. Clearly identify uncertainty or disagreement. Do not copy unsupported forum claims into the ruling.
 ANSWERING RULE: A retrieved excerpt is evidence, not a keyword gate. If no excerpt matches the player's wording exactly but the interaction can still be resolved reliably from the rules principles and card text provided, give the useful ruling and be transparent about the basis. Do not fail merely because the question uses different wording. If you cannot verify an exact rule number, omit that number instead of withholding the answer or inventing one.
+INTERPRETATION RULE: Many real table questions are not written verbatim in the rulebook. Derive the outcome by combining the applicable game concepts, sequence of events, current Oracle text, state-based actions, replacement/trigger rules, and known official rulings. When that derivation is reliable, answer it clearly and say in the explanation that the conclusion follows from those principles rather than from one verbatim rule. When web research finds a closely analogous judge/community answer, use it only as corroboration and label it as supporting context. Never manufacture a card ability, game fact, rule number, or citation.
+USEFULNESS RULE: Do not respond with only a link to the Comprehensive Rules. quick must contain the actual table-ready result. explain must describe why. judgeDetail may show the stack/order, applicable principles, and any important exception. If the available facts support more than one outcome, describe the branches briefly or ask the one missing detail that decides between them.
 CONTEXT RULE: First decide whether the player's wording contains enough information. Prefer answering the clear part of the question. Only when a materially different outcome depends on missing game state, ask ONE short clarification instead of assuming. Example: “Who wins, 16–15, I have 16” is ambiguous: life totals alone do not explain why the game ended; ask whether time was called, a game-ending effect occurred, or something else. Never infer that higher life wins when time expires.
 TOURNAMENT RULE: The Comprehensive Rules do not by themselves determine all tournament end-of-match procedures. If the question requires tournament policy and no official tournament excerpt was supplied, explain that briefly and ask the needed tournament context rather than fabricating policy.
 STYLE: Respond in the user's language (${String(body.language||'en')}). Start useful and simple. No developer/debug wording. No “production endpoint”, “keyword-level answer”, or implementation notes.
@@ -92,9 +103,11 @@ Return ONLY JSON with keys: status ("answer" or "clarify"), quick, clarification
       if(!rawAnswer.trim())return json(502,{error:'The rules assistant did not return an answer. Please try again.'});
       out={status:'answer',quick:rawAnswer.trim(),clarification:'',explain:'',judgeDetail:'',references:[]};
     }
-    out.status=out.status==='clarify'?'clarify':'answer';out.references=Array.isArray(out.references)?out.references:[];
+    out=normalizeJudgeOutput(out);
+    if(out.status==='answer'&&!out.quick)return json(502,{error:'The Judge returned sources but no readable ruling. Please ask again.'});
     for(const source of extractWebCitations(data))if(!out.references.some(x=>x.url===source.url))out.references.push(source);
     if(excerpts && !out.references.some(x=>String(x.url||'').includes('wizards')))out.references.push({label:'Magic Comprehensive Rules',section:'Relevant rules retrieved for this question',url:cr.url});
     return json(200,out);
   }catch{return json(502,{error:'Could not reach the rules assistant. Try again.'})}
 }
+export {extractOutput,parseJudgeOutput,normalizeJudgeOutput};
