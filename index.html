@@ -278,7 +278,7 @@ body{min-height:100dvh}
 <div class='settingsGroup'><div class='settingsLabel'>ACCESSIBILITY</div><div class='settingsPanel settingsRows'><label class='settingsRow'><span><b>Reduce motion</b><small>Reduce animated effects including coin and D20</small></span><input id='reduceMotion' type='checkbox'></label></div></div>
 <div class='settingsGroup'><div class='settingsLabel'>DATA & BACKUP</div><div class='settingsPanel'><div class='dataStatus'><span class='statusDot'></span><div><b>Stored on this device</b><div id='durableStorageText' class='muted small'>Checking durable local storage…</div></div></div><div class='settingsActionGrid'><button class='btn accent' onclick='exportBackup()'>Export backup</button><button class='btn' onclick="document.getElementById('restoreBackupInput').click()">Import backup</button><button class='btn' onclick='openRecentlyDeleted()'>Recently deleted</button><button class='btn' onclick='runDiagnostics()'>Diagnostics</button></div><input id='restoreBackupInput' type='file' accept='application/json,.json' style='display:none'><p id='backupStatus' class='muted small'></p></div></div>
 <div class='settingsGroup'><div class='settingsLabel'>SUPPORT</div><div class='settingsPanel'><div class='dataStatus'><span class='supportGlyph'>!</span><div><b>Found a problem?</b><div class='muted small'>Report it directly inside HexVault. The report is delivered to HexVault Support.</div></div></div><button class='btn accent wide supportReportButton' type='button' onclick='reportHexVaultProblem()'>Report a bug</button><p class='muted small supportPrivacy'>HexVault can include the current page, version, device/browser, connection status, and recent app errors. Cards, decks, wishlist, profile, and collection are never included.</p></div></div>
-<div class='settingsGroup'><div class='settingsLabel'>ABOUT</div><div class='settingsPanel settingsRows'><div class='settingsRow'><span><b>HexVault</b><small>Version 134 · PWA</small></span><span class='muted'>v134</span></div><div class='settingsRow'><span><b>Cloud sync</b><small>Not configured yet</small></span><span class='muted'>Local</span></div></div></div></section>
+<div class='settingsGroup'><div class='settingsLabel'>ABOUT</div><div class='settingsPanel settingsRows'><div class='settingsRow'><span><b>HexVault</b><small>Version 135 · PWA</small></span><span class='muted'>v135</span></div><div class='settingsRow'><span><b>Cloud sync</b><small>Not configured yet</small></span><span class='muted'>Local</span></div></div></div></section>
 <nav class='bottom'>
 <div class='nav on' onclick="go('home',this)"><span class='navIcon'><svg viewBox='0 0 24 24'><path d='M4 11.5 12 5l8 6.5v7.5a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z'/></svg></span>Home</div>
 <div class='nav' onclick="go('collection',this)"><span class='navIcon'><svg viewBox='0 0 24 24'><rect x='7' y='4' width='11' height='16' rx='2'/><path d='M7 7H5.5A1.5 1.5 0 0 0 4 8.5v9A1.5 1.5 0 0 0 5.5 19H7'/></svg></span>Collection</div>
@@ -1379,7 +1379,7 @@ function openRecentlyDeleted(){sheetTitle.textContent='Recently deleted';sheetBo
 function restoreDeleted(i){let c=recentlyDeleted[i];if(!c)return;let old=collection.find(x=>batchKey(x)===batchKey(c));old?old.qty=(old.qty||1)+(c.qty||1):collection.push({...c,deleted_at:undefined,added_at:new Date().toISOString()});recentlyDeleted.splice(i,1);save();renderCollection();openRecentlyDeleted()}
 function runDiagnostics(){let tests=[];let t=(name,ok)=>tests.push([name,!!ok]);try{localStorage.setItem('av_diag','1');t('Local storage writable',localStorage.getItem('av_diag')==='1');localStorage.removeItem('av_diag')}catch(e){t('Local storage writable',false)}t('Collection data valid',Array.isArray(collection));t('Deck data valid',Array.isArray(decks));t('Wishlist data valid',Array.isArray(wishlist));t('Collection snapshots active',Array.isArray(readCollectionSnapshots()));t('Scanner UI present',!!document.getElementById('camera'));t('Life counter UI present',!!document.getElementById('lifeBoard'));t('PWA manifest linked',!!document.querySelector('link[rel=manifest]'));sheetTitle.textContent='HexVault diagnostics';sheetBody.innerHTML=tests.map(([n,ok])=>`<div class='item'><div class='grow'>${esc(n)}</div><b class='${ok?'diagPass':'diagFail'}'>${ok?'PASS':'CHECK'}</b></div>`).join('')+`<p class='muted small'>Diagnostics checks local app integrity. Camera/network permissions still depend on the browser and connection.</p>`;modal.classList.add('on')}
 
-function exportBackup(){downloadBlob('hexvault-backup.json','application/json',JSON.stringify({version:134,exported:new Date().toISOString(),collection,decks,wishlist,profile,settings:{collectionSort,collectionDisplay}},null,2))}
+function exportBackup(){downloadBlob('hexvault-backup.json','application/json',JSON.stringify({version:135,exported:new Date().toISOString(),collection,decks,wishlist,profile,settings:{collectionSort,collectionDisplay}},null,2))}
 function restoreBackupFile(file){if(!file)return;let r=new FileReader();r.onload=()=>{try{let b=JSON.parse(r.result);if(!b||!Array.isArray(b.collection)||!Array.isArray(b.decks)||!Array.isArray(b.wishlist))throw new Error('Invalid backup');if(!confirm('Restore this HexVault backup? This will replace the collection, decks and wishlist stored on this device.'))return;collection=b.collection;decks=b.decks;wishlist=b.wishlist;if(b.profile&&typeof b.profile==='object'){profile=b.profile;localStorage.setItem('av_profile',JSON.stringify(profile))}if(b.settings&&b.settings.collectionSort)collectionSort=b.settings.collectionSort;save();loadProfile();loadSimpleSettings();renderEventFormats();renderCollection();renderDecks();let st=document.getElementById('backupStatus');if(st)st.textContent='Backup restored ✓';alert('HexVault backup restored.')}catch(e){alert('This does not look like a valid HexVault backup.')}};r.readAsText(file)}
 function openExport(){sheetTitle.textContent='Export HexVault';sheetBody.innerHTML=`<div class='exportgrid'><button class='btn' onclick='exportCollectionCSV()'>Collection CSV</button><button class='btn' onclick='exportDecksCSV()'>Decks CSV</button><button class='btn' onclick='exportBackup()'>Full JSON backup</button><button class='btn' onclick='restoreLatestCollectionSnapshot()'>Restore autosave</button><button class='btn' onclick='window.print()'>PDF / Print report</button></div><p class='muted small'>Exports use your real local HexVault data. JSON includes collection, decks and wishlist so you have a portable backup.</p>`;modal.classList.add('on')}
 
@@ -2070,7 +2070,7 @@ document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{if(window.v123E
 })();
 </script>
 <script id="v129-update-runtime">
-if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{const registration=await navigator.serviceWorker.register('./sw.js?v=134',{updateViaCache:'none'});await registration.update()}catch(error){console.warn('HexVault update check unavailable',error)}});
+if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{const registration=await navigator.serviceWorker.register('./sw.js?v=135',{updateViaCache:'none'});await registration.update()}catch(error){console.warn('HexVault update check unavailable',error)}});
 </script>
 <script id="v130-in-app-bug-reporting">
 (()=>{
@@ -2089,7 +2089,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{con
  window.submitHexVaultBug=async function(event){
   event.preventDefault();const button=document.getElementById('bugSubmit'),status=document.getElementById('bugReportStatus');button.disabled=true;button.textContent='Sending…';status.className='bugReportStatus muted small';status.textContent='Sending securely to HexVault Support…';
   const include=document.getElementById('bugDiagnostics')?.checked;
-  const diagnostics=include?{page:currentPage(),version:'v134',device:navigator.userAgent,viewport:`${window.innerWidth} × ${window.innerHeight}`,online:navigator.onLine,errors:[...recentErrors]}:{};
+  const diagnostics=include?{page:currentPage(),version:'v135',device:navigator.userAgent,viewport:`${window.innerWidth} × ${window.innerHeight}`,online:navigator.onLine,errors:[...recentErrors]}:{};
   try{const response=await fetch('/api/report-bug',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:document.getElementById('bugCategory')?.value,description:document.getElementById('bugDescription')?.value,contact:document.getElementById('bugContact')?.value,diagnostics})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||'Could not send the report.');status.className='bugReportStatus success small';status.textContent='✓ Report sent to HexVault Support. Thank you!';button.textContent='Sent';setTimeout(()=>window.closeModal?.(),1600)}catch(error){status.className='bugReportStatus error small';status.textContent=error.message||'Could not send the report. Please try again.';button.disabled=false;button.textContent='Try again'}
  };
 })();
@@ -2125,7 +2125,7 @@ window.addEventListener('load',()=>{
  });
 });
 </script>
-<script id="v134-refresh-language-judge-fixes">
+<script id="v135-refresh-language-judge-fixes">
 (()=>{
  const OCR_MODELS={en:'eng',es:'spa',fr:'fra',de:'deu',it:'ita',pt:'por',ja:'jpn',ko:'kor',ru:'rus',zhs:'chi_sim',zht:'chi_tra',he:'heb',ar:'ara',la:'lat',grc:'grc',sa:'san'};
  const LANGUAGE_NAMES={en:'🇬🇧 English',es:'🇪🇸 Spanish',fr:'🇫🇷 French',de:'🇩🇪 German',it:'🇮🇹 Italian',pt:'🇵🇹 Portuguese',ja:'🇯🇵 Japanese',ko:'🇰🇷 Korean',ru:'🇷🇺 Russian',zhs:'🇨🇳 Simplified Chinese',zht:'🇹🇼 Traditional Chinese',he:'🇮🇱 Hebrew',ar:'العربية Arabic',la:'LAT Latin',grc:'ΕΛ Ancient Greek',sa:'सं Sanskrit',ph:'Φ Phyrexian'};
@@ -2141,6 +2141,19 @@ window.addEventListener('load',()=>{
  async function searchPrintedCards(guesses,code){
   const found=new Map();
   for(const guess of guesses.slice(0,5)){
+   // Scryfall's named endpoint resolves localized printed names (for example,
+   // Spanish "Anillo solar" -> Sol Ring) and tolerates small OCR mistakes.
+   try{
+    const named=await fetch('https://api.scryfall.com/cards/named?fuzzy='+encodeURIComponent(guess));
+    if(named.ok){
+     const card=await named.json(),displayed=card.printed_name||card.name||'';
+     if(!code||card.lang===code){
+      const score=Math.max(similarity(guess,displayed),similarity(guess,card.name||''));
+      if(score>=.5)found.set(card.oracle_id||card.name,{card,score:Math.min(1,score+.06)});
+     }
+    }
+   }catch(_){}
+   if(found.size>=3)continue;
    for(const query of languageQueries(guess,code)){
     try{
      const response=await fetch('https://api.scryfall.com/cards/search?include_multilingual=true&unique=prints&order=released&q='+encodeURIComponent(query));
@@ -2175,6 +2188,7 @@ window.addEventListener('load',()=>{
    if(lang==='ph')throw Error('Phyrexian script needs artwork, set and collector-number matching. Lock the set when possible, or use manual confirmation.');
    const passes=lang?[{code:lang,model:OCR_MODELS[lang]||'eng'}]:[
     {code:'',model:'eng+spa+fra+deu+ita+por'},
+    {code:'en',model:'eng'},{code:'es',model:'spa'},{code:'fr',model:'fra'},{code:'de',model:'deu'},{code:'it',model:'ita'},{code:'pt',model:'por'},
     {code:'ja',model:'jpn'},{code:'ko',model:'kor'},{code:'ru',model:'rus'},{code:'zhs',model:'chi_sim'},{code:'zht',model:'chi_tra'},
     {code:'he',model:'heb'},{code:'ar',model:'ara'},{code:'la',model:'lat'},{code:'grc',model:'grc'},{code:'sa',model:'san'}
    ];
@@ -2182,18 +2196,19 @@ window.addEventListener('load',()=>{
    for(let i=0;i<passes.length;i++){
     stage(i?'Detecting printed language…':'Reading title…');
     try{guesses=await readScannerTitle(canvas,passes[i].model)}catch(error){if(lang)throw error;continue}
-    if(!guesses.length)continue;stage('Matching printed card…');matches=await searchPrintedCards(guesses,passes[i].code);if(matches.length&&matches[0].score>=.66){detected=passes[i].code;break}
+    if(!guesses.length)continue;stage('Matching printed card…');const passMatches=await searchPrintedCards(guesses,passes[i].code);if(passMatches.length&&(!matches.length||passMatches[0].score>matches[0].score)){matches=passMatches;detected=passes[i].code}if(matches.length&&matches[0].score>=.58)break;
    }
-   if(!matches.length||matches[0].score<.66)throw Error('No reliable card match found. Select the printed language or search manually.');
-   const cards=matches.filter(item=>item.score>=Math.max(.62,matches[0].score-.16)).map(item=>item.card);
+   if(!matches.length||matches[0].score<.58)throw Error('I could not identify this card reliably. Select its printed language or search the title manually.');
+   const cards=matches.filter(item=>item.score>=Math.max(.56,matches[0].score-.16)).map(item=>item.card);
    for(const item of matches)_scanConfidenceByName[item.card.name]=Math.max(62,Math.min(99,Math.round(item.score*100)));
-   cameraNote.textContent=cards.length===1?'Found ✓':'Choose match';scanStatus.textContent=`${detected?LANGUAGE_NAMES[detected].replace(/^.. /,''):'Language detected'} · ${Math.round(matches[0].score*100)}% match`;
+   window._scanDetectedLanguage=detected||matches[0]?.card?.lang||'';
+   cameraNote.textContent=cards.length===1?'Found ✓':'Choose match';scanStatus.textContent=`${window._scanDetectedLanguage?(LANGUAGE_NAMES[window._scanDetectedLanguage]||window._scanDetectedLanguage.toUpperCase()):'Language detected'} · ${Math.round(matches[0].score*100)}% match`;
    showSearchChoices(cards);
   }catch(error){cameraNote.textContent='Not found';scanStatus.textContent=(error.message||'Could not recognize card')+' Keep the full title clear and avoid glare.'}
  };
  async function recognizeBinderSlot(canvas,slotNo){
   if(lang==='ph')return null;
-  const passes=lang?[{code:lang,model:OCR_MODELS[lang]||'eng'}]:[{code:'',model:'eng+spa+fra+deu+ita+por'},{code:'ja',model:'jpn'},{code:'ko',model:'kor'},{code:'ru',model:'rus'},{code:'zhs',model:'chi_sim'},{code:'zht',model:'chi_tra'},{code:'he',model:'heb'},{code:'ar',model:'ara'},{code:'la',model:'lat'},{code:'grc',model:'grc'},{code:'sa',model:'san'}];
+  const passes=lang?[{code:lang,model:OCR_MODELS[lang]||'eng'}]:[{code:'',model:'eng+spa+fra+deu+ita+por'},{code:'en',model:'eng'},{code:'es',model:'spa'},{code:'fr',model:'fra'},{code:'de',model:'deu'},{code:'it',model:'ita'},{code:'pt',model:'por'},{code:'ja',model:'jpn'},{code:'ko',model:'kor'},{code:'ru',model:'rus'},{code:'zhs',model:'chi_sim'},{code:'zht',model:'chi_tra'},{code:'he',model:'heb'},{code:'ar',model:'ara'},{code:'la',model:'lat'},{code:'grc',model:'grc'},{code:'sa',model:'san'}];
   for(const pass of passes){try{const guesses=await readScannerTitle(canvas,pass.model),matches=await searchPrintedCards(guesses,pass.code);if(matches[0]?.score>=.66)return {card:matches[0].card,confidence:Math.round(matches[0].score*100),slot:slotNo}}catch(_){} }
   return null;
  }
@@ -2208,6 +2223,11 @@ window.addEventListener('load',()=>{
   requestAnimationFrame(()=>{window.renderDeckEditor?.();if(!document.getElementById('deckEditor')?.children.length)setTimeout(()=>window.renderDeckEditor?.(),50)});
  }
  const oldOpenDeck=window.openDeck;window.openDeck=function(id){localStorage.setItem('av_current_deck',String(id));return oldOpenDeck.call(this,id)};
+ const localizedChoose=window.chooseOracleCard;window.chooseOracleCard=async function(name){
+  const selected=lang,detected=window._scanDetectedLanguage||'';
+  if(!selected&&detected)lang=detected;
+  try{return await localizedChoose.call(this,name)}finally{lang=selected}
+ };
  window.addEventListener('load',restoreDeckAfterReload);
 })();
 </script>
