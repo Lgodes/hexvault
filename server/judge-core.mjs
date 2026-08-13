@@ -2,7 +2,16 @@ const RULES_HUB = 'https://magic.wizards.com/en/rules';
 const MAX_SOURCE = 900000;
 
 function json(statusCode, body){return {statusCode,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},body:JSON.stringify(body)}}
-function extractOutput(data){if(data.output_text)return data.output_text;for(const item of data.output||[])for(const c of item.content||[])if(c.type==='output_text'&&c.text)return c.text;return ''}
+function extractOutput(data){
+  if(typeof data?.output_text==='string')return data.output_text;
+  const parts=[];
+  for(const item of data?.output||[])for(const c of item?.content||[]){
+    if(typeof c?.text==='string')parts.push(c.text);
+    else if(typeof c?.text?.value==='string')parts.push(c.text.value);
+    else if(c?.json&&typeof c.json==='object')parts.push(JSON.stringify(c.json));
+  }
+  return parts.join('\n').trim();
+}
 function extractWebCitations(data){
   const found=[];
   for(const item of data.output||[])for(const content of item.content||[])for(const a of content.annotations||[]){
@@ -70,7 +79,13 @@ Return ONLY JSON with keys: status ("answer" or "clarify"), quick, clarification
   const input=`Return the Judge ruling as one JSON object matching the required schema.\n\nRECENT CONVERSATION:\n${history.length?JSON.stringify(history,null,2):'None'}\n\nPLAYER QUESTION:\n${question}\n\nATTACHED CARD ORACLE TEXT:\n${cards.length?JSON.stringify(cards,null,2):'None'}\n\nCURRENT WIZARDS COMPREHENSIVE RULES — RETRIEVED EXCERPTS:\n${excerpts||'[No relevant excerpt retrieved]'}\n\nOFFICIAL TOURNAMENT POLICY EXCERPTS:\n${tournament||'[Not supplied for this request]'}\n\nSOURCE STATUS:\nComprehensive Rules URL: ${cr.url}\n${sourceWarning?`Warning: ${sourceWarning}`:'Current rules document retrieved from the Wizards rules hub.'}`;
   try{
     const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'content-type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_JUDGE_MODEL||'gpt-5-mini',instructions,input,tools:[{type:'web_search'}],max_output_tokens:1800})});
-    const data=await r.json();if(!r.ok){console.error('HexVault Judge API error',data?.error?.code||r.status);return json(502,{error:'The Judge service could not complete this question. Please try again.'})}
+    const data=await r.json();if(!r.ok){
+      const code=data?.error?.code||data?.error?.type||String(r.status);console.error('HexVault Judge API error',code);
+      if(['insufficient_quota','credit_balance_exhausted','billing_hard_limit_reached'].includes(code))return json(503,{error:'The Judge API account has no available credit. Add API credit in OpenAI billing, then try again.'});
+      if(r.status===401)return json(503,{error:'The Judge API key was rejected. Replace OPENAI_API_KEY in Vercel and redeploy.'});
+      if(r.status===429)return json(503,{error:'The Judge is temporarily rate-limited. Wait a moment and try again.'});
+      return json(502,{error:'The Judge service could not complete this question. Please try again.'});
+    }
     const rawAnswer=extractOutput(data);
     let out;
     try{out=parseJudgeOutput(rawAnswer)}catch{

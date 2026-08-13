@@ -1,4 +1,4 @@
-HEXVAULT v132 — VERCEL READY
+HEXVAULT v134 — VERCEL READY
 
 Deploy:
 1. Upload/import this project to Vercel (or push it to GitHub and import the repo).
@@ -12,6 +12,7 @@ Deploy:
 
 Optional/required environment variables:
 - OPENAI_API_KEY: required only for the server-backed Live Judge endpoint.
+- The OpenAI API account must also have available API credit. ChatGPT subscriptions do not include API credit.
 - RESEND_API_KEY: required for Settings → Support → Report a bug. Reports are delivered to hexvaultsupport@gmail.com.
 - BUG_REPORT_FROM: optional verified sender, for example "HexVault Reports <reports@yourdomain.com>". Without it, the endpoint uses Resend's onboarding sender for initial testing.
 - WIZARDS_MTR_URL: optional tournament-policy source for Live Judge.
@@ -19,3 +20,4 @@ Optional/required environment variables:
 - ARCANA_EVENTS_API_KEY: optional bearer token for that provider.
 
 After changing environment variables, redeploy in Vercel.
+If Judge fails, open Vercel Logs and inspect /api/judge. v134 now reports missing credit, rejected keys, and rate limits separately instead of only saying "Judge unavailable".
