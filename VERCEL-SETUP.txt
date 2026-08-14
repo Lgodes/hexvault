@@ -1,4 +1,4 @@
-HEXVAULT v159 — VERCEL READY
+HEXVAULT v160 — VERCEL READY
 
 Deploy:
 1. Upload/import this project to Vercel (or push it to GitHub and import the repo).
@@ -33,4 +33,4 @@ The scanner sends one compressed captured frame to /api/recognize-card. The endp
 
 HexVault searches the current Scryfall catalog and all multilingual printings. The optional offline database stores searchable card-name metadata on the device; HD artwork remains online and is cached as needed so the app does not become an enormous download.
 
-After changing an environment variable, redeploy the production deployment. Then open the production URL directly, confirm Settings shows v159, and refresh/reinstall the PWA if an older cached version remains.
+After changing an environment variable, redeploy the production deployment. Then open the production URL directly, confirm Settings shows v160, and refresh/reinstall the PWA if an older cached version remains.

@@ -71,10 +71,10 @@ export default async function handler(req,res){
       const parsed=parseModelJSON(payload),verified=await Promise.all((parsed.cards||[]).map(async clue=>{
         if(!clue.recognized)return {slot:clue.slot,recognized:false,reason:'empty_or_unreadable'};
         const result=await verify(clue);if(!result.card)return {slot:clue.slot,recognized:false,reason:'not_verified',clue};
-        const visible=clue.printed_name||clue.canonical_name,expected=result.card.printed_name||result.card.name,titleMatches=sameTitle(visible,expected)||sameTitle(clue.canonical_name,result.card.name),exactPrinting=Boolean(clue.set_code&&clue.collector_number&&result.card.set===String(clue.set_code).toLowerCase()&&String(result.card.collector_number)===String(clue.collector_number).replace(/^#/,'')),confidence=Math.max(0,Math.min(100,Number(clue.confidence)||0));
+        const visible=clue.printed_name||clue.canonical_name,expected=result.card.printed_name||result.card.name,titleMatches=sameTitle(visible,expected)||sameTitle(clue.canonical_name,result.card.name),setVerified=Boolean(clue.set_code&&result.card.set===String(clue.set_code).toLowerCase()),exactPrinting=Boolean(setVerified&&clue.collector_number&&String(result.card.collector_number)===String(clue.collector_number).replace(/^#/,'')),confidence=Math.max(0,Math.min(100,Number(clue.confidence)||0));
         if(!titleMatches||confidence<60)return {slot:clue.slot,recognized:false,reason:'not_verified',clue:{...clue,confidence:Math.min(confidence,55)}};
         const needsReview=!exactPrinting||confidence<80;
-        return {slot:clue.slot,recognized:true,needs_review:needsReview,card:result.card,detected:{...clue,confidence:needsReview?Math.min(confidence,79):confidence,title_verified:true,printing_verified:exactPrinting,language:result.lang||languageCode(clue.language)||result.card.lang||''}};
+        return {slot:clue.slot,recognized:true,needs_review:needsReview,card:result.card,detected:{...clue,confidence:needsReview?Math.min(confidence,79):confidence,title_verified:true,set_verified:setVerified,printing_verified:exactPrinting,language:result.lang||languageCode(clue.language)||result.card.lang||''}};
       }));
       return json(res,200,{cards:verified,verified:true});
     }catch(error){if(error.name==='AbortError')return json(res,504,{error:'Binder recognition took too long. Move closer and keep the full page visible.'});return json(res,500,{error:error.message||'Binder recognition failed.'})}finally{clearTimeout(timer)}
