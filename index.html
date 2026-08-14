@@ -226,7 +226,7 @@ body{min-height:100dvh}
 .matchOverviewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}.matchOverviewStat{background:#111622;border:1px solid #283042;border-radius:15px;padding:12px}.matchOverviewStat b{display:block;font-size:22px}.matchOverviewStat span{font-size:11px;color:var(--muted)}.matchOverviewFilter{margin:10px 0;background:#111622;border:1px solid var(--line);border-radius:13px;padding:11px;color:#fff}.matchTagFrequency{display:grid;gap:7px;margin:9px 0 16px}.matchTagFrequencyRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}.matchTagFrequencyRow span{font-size:12px}.matchTagFrequencyRow b{font-size:12px;color:#c9b8ff}.matchTagBar{grid-column:1/-1;height:6px;border-radius:99px;background:#202737;overflow:hidden}.matchTagBar i{display:block;height:100%;background:#7650e8;border-radius:99px}.matchDeckSelect{margin:10px 0;background:#111622;border:1px solid var(--line);border-radius:13px;padding:11px;color:#fff}
 @media(max-width:370px){.matchOpponentTop{grid-template-columns:1fr}.matchOpponentTop select{width:100%}.matchSetup{grid-template-columns:1fr}}
 </style>
-<style id='v166-collection-polish'>
+<style id='v168-collection-polish'>
 .bottom{background:#080c14!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 -12px 30px #0009!important}
 .collectionSetCard[hidden]{display:none!important}
 .setCatalogBar input{accent-color:var(--accent)}
@@ -284,7 +284,7 @@ body{min-height:100dvh}
 <div class='settingsGroup'><div class='settingsLabel'>ACCESSIBILITY</div><div class='settingsPanel settingsRows'><label class='settingsRow'><span><b>Reduce motion</b><small>Reduce animated effects including coin and D20</small></span><input id='reduceMotion' type='checkbox'></label></div></div>
 <div class='settingsGroup'><div class='settingsLabel'>DATA & BACKUP</div><div class='settingsPanel'><div class='dataStatus'><span class='statusDot'></span><div><b>Stored on this device</b><div id='durableStorageText' class='muted small'>Checking durable local storage…</div></div></div><div class='settingsActionGrid'><button class='btn accent' onclick='exportBackup()'>Export backup</button><button class='btn' onclick="document.getElementById('restoreBackupInput').click()">Import backup</button><button class='btn' onclick='openRecentlyDeleted()'>Recently deleted</button><button class='btn' onclick='runDiagnostics()'>Diagnostics</button></div><input id='restoreBackupInput' type='file' accept='application/json,.json' style='display:none'><p id='backupStatus' class='muted small'></p></div></div>
 <div class='settingsGroup'><div class='settingsLabel'>SUPPORT</div><div class='settingsPanel'><div class='dataStatus'><span class='supportGlyph'>!</span><div><b>Found a problem?</b><div class='muted small'>Report it directly inside HexVault. The report is delivered to HexVault Support.</div></div></div><button class='btn accent wide supportReportButton' type='button' onclick='reportHexVaultProblem()'>Report a bug</button><p class='muted small supportPrivacy'>HexVault can include the current page, version, device/browser, connection status, and recent app errors. Cards, decks, wishlist, profile, and collection are never included.</p></div></div>
-<div class='settingsGroup'><div class='settingsLabel'>ABOUT</div><div class='settingsPanel settingsRows'><div class='settingsRow'><span><b>HexVault</b><small>Version 166 · PWA</small></span><span class='muted'>v166</span></div><div class='settingsRow'><span><b>Cloud sync</b><small>Not configured yet</small></span><span class='muted'>Local</span></div></div></div></section>
+<div class='settingsGroup'><div class='settingsLabel'>ABOUT</div><div class='settingsPanel settingsRows'><div class='settingsRow'><span><b>HexVault</b><small>Version 168 · PWA</small></span><span class='muted'>v168</span></div><div class='settingsRow'><span><b>Cloud sync</b><small>Not configured yet</small></span><span class='muted'>Local</span></div></div></div></section>
 <nav class='bottom'>
 <div class='nav on' onclick="go('home',this)"><span class='navIcon'><svg viewBox='0 0 24 24'><path d='M4 11.5 12 5l8 6.5v7.5a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z'/></svg></span>Home</div>
 <div class='nav' onclick="go('collection',this)"><span class='navIcon'><svg viewBox='0 0 24 24'><rect x='7' y='4' width='11' height='16' rx='2'/><path d='M7 7H5.5A1.5 1.5 0 0 0 4 8.5v9A1.5 1.5 0 0 0 5.5 19H7'/></svg></span>Collection</div>
@@ -328,6 +328,51 @@ window.addEventListener('DOMContentLoaded',function(){
   }
   window.ArcanaDurable={state,write,read,restoreIfNeeded};
   restoreIfNeeded();
+});
+</script>
+<style id="v168-judge-discover-fixes">
+.judgeFollowUp{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.judgeFollowUp textarea{width:100%;box-sizing:border-box;min-height:92px;border-radius:14px;background:#0d111a;border:1px solid var(--line);color:var(--text);padding:12px;font:inherit;resize:vertical}
+.judgeConversationNote{margin:8px 0 0}
+</style>
+<script id="v168-judge-discover-fixes">
+window.addEventListener('load',()=>{
+  function questionLanguage(){return 'auto'}
+  function followUpMarkup(){return `<div class='judgeFollowUp'><b>Ask a follow-up</b><p class='muted small judgeConversationNote'>Your previous question and ruling stay in this conversation.</p><textarea id='judgeFollowUpQ' placeholder='Add the missing detail or ask what happens next…'></textarea><button class='btn accent wide' style='margin-top:9px' type='button' onclick='submitJudgeFollowUp()'>Ask follow-up</button></div>`}
+  function judgeReferences(data){return (data.references||[]).map(x=>`<a class='btn' target='_blank' rel='noopener' href='${escAttr(x.url||'https://magic.wizards.com/en/rules')}'>${esc(x.label||'Rules reference')}${x.section?' · '+esc(x.section):''}</a>`).join(' ')}
+  function answerMarkup(data){const refs=judgeReferences(data);return `<b>Quick answer</b><p>${esc(data.quick||'')}</p>${data.explain?`<div class='section'><b>Explain</b><p class='muted'>${esc(data.explain)}</p></div>`:''}${data.judgeDetail?`<div class='section'><b>Judge detail</b><p class='muted'>${esc(data.judgeDetail)}</p></div>`:''}${refs?`<div class='row' style='margin-top:12px;flex-wrap:wrap'>${refs}</div>`:''}<div class='row' style='margin-top:12px;flex-wrap:wrap'>${!data.researchUsed?`<button class='btn' onclick='askJudge(true)'>⌕ Search deeper</button>`:`<span class='badge'>Web-supported ruling</span>`}</div>${followUpMarkup()}`}
+  window.submitJudgeFollowUp=function(){const input=document.getElementById('judgeFollowUpQ'),main=document.getElementById('judgeQ'),value=(input?.value||'').trim();if(!value)return;main.value=value;askJudge(false,true)};
+  window.askJudge=async function(forceResearch=false,isFollowUp=false){
+    const field=document.getElementById('judgeQ'),q=(field?.value||'').trim(),answer=document.getElementById('judgeAnswer');if(!answer)return;
+    answer.className='section card';if(!q){answer.innerHTML='<b>Describe the situation first.</b><p class="muted">Include the cards/actions involved and whose turn it is.</p>';return}
+    const previous=answer.innerHTML;answer.innerHTML=`<b>${isFollowUp?'Checking your follow-up…':'Checking the current rules…'}</b><p class='muted'>Working out the ruling from your question and attached card text.</p>`;
+    try{
+      window.judgeConversation=window.judgeConversation||[];
+      const response=await fetch('/api/judge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q,language:questionLanguage(),cards:window.judgeAttachedCards||[],history:window.judgeConversation,research:forceResearch})});
+      const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'Judge service unavailable');
+      if(data.status==='clarify'){
+        window.judgeConversation.push({role:'user',content:q},{role:'assistant',content:data.clarification||'Can you add a little more context?'});window.judgeConversation=window.judgeConversation.slice(-8);
+        answer.innerHTML=`<b>One detail needed</b><p>${esc(data.clarification||'Can you add a little more context?')}</p>${followUpMarkup()}`;return;
+      }
+      window.judgeConversation.push({role:'user',content:q},{role:'assistant',content:[data.quick,data.explain,data.judgeDetail].filter(Boolean).join('\n\n')});window.judgeConversation=window.judgeConversation.slice(-8);
+      answer.innerHTML=answerMarkup(data);if(field)field.value='';
+    }catch(error){answer.innerHTML=isFollowUp?previous:`<b>Judge unavailable</b><p class='muted'>${esc(error.message||'Could not check the rules right now.')}</p><a class='btn' target='_blank' rel='noopener' href='https://magic.wizards.com/en/rules'>Open official Magic rules</a>`;if(isFollowUp)answer.insertAdjacentHTML('beforeend',`<p class='muted small'>Follow-up failed: ${esc(error.message||'Please try again.')}</p>${followUpMarkup()}`)}
+  };
+
+  /* Keep Discover collection-led. This final override prevents the legacy deck-only renderer from replacing it. */
+  const localDiscoverDay=()=>{const now=new Date();return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`};
+  let renderedDiscoverDay='';
+  window.renderDiscover=function(){
+    const body=document.getElementById('discoverBody');if(!body)return;
+    if(!collection.length){body.className='empty';body.innerHTML='<b>No cards to discover yet</b>Add cards to your Collection and HexVault will find daily interactions and deck ideas.';return}
+    const date=localDiscoverDay();renderedDiscoverDay=date;const seed=[...date].reduce((sum,char)=>sum+char.charCodeAt(0),collection.length),allIdeas=pairIdeas(collection),ideas=allIdeas.filter(idea=>!idea.missing&&(idea.cards||[]).every(card=>collection.some(owned=>(owned.id&&card.id?owned.id===card.id:String(owned.name||'').toLowerCase()===String(card.name||'').toLowerCase())))),partialIdeas=allIdeas.filter(idea=>idea.missing),rotation=ideas.length?seed%ideas.length:0,ordered=[...ideas.slice(rotation),...ideas.slice(0,rotation)],unused=collection.filter(card=>!(Number(deckUsageTotal?.(card.name))||0)&&!isLand(card)).sort((a,b)=>((b.keywords||[]).length+(cardText(b)?1:0))-((a.keywords||[]).length+(cardText(a)?1:0))),themes={};
+    collection.forEach(card=>(card.keywords||[]).forEach(keyword=>themes[keyword]=(themes[keyword]||0)+qty(card)));
+    const archetypes=[['Sacrifice / Aristocrats',card=>/sacrifice|whenever .* dies|whenever .* is put into a graveyard/.test(cardText(card))],['Graveyard / Reanimator',card=>/graveyard|mill|surveil/.test(cardText(card))],['Tokens',card=>/create .* token|tokens you control/.test(cardText(card))],['+1/+1 Counters',card=>/\+1\/\+1 counter/.test(cardText(card))],['Spellslinger',card=>/instant or sorcery|noncreature spell|whenever you cast/.test(cardText(card))],['Artifacts',card=>/Artifact/i.test(card.type_line||'')||/artifact/.test(cardText(card))],['Enchantments',card=>/Enchantment/i.test(card.type_line||'')||/enchantment/.test(cardText(card))],['Lifegain',card=>/gain .* life|whenever you gain life/.test(cardText(card))]];
+    const pattern=archetypes.map(([name,test])=>({name,cards:collection.filter(test)})).sort((a,b)=>b.cards.length-a.cards.length)[0],colorCounts={};collection.forEach(card=>(card.color_identity||card.colors||[]).forEach(color=>colorCounts[color]=(colorCounts[color]||0)+1));const colorNames={W:'White',U:'Blue',B:'Black',R:'Red',G:'Green'},deckColors=Object.entries(colorCounts).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([color])=>colorNames[color]).filter(Boolean),deckSeed=pattern?.cards.length>=2?`${deckColors.length?deckColors.join('–')+' ':''}${pattern.name}`:null;
+    body.className='';body.innerHTML=`<div class='v126Section v126DiscoveryLead'><div class='muted small'>DAILY COLLECTION DISCOVERY · ${date}</div><h2>Ideas from your collection</h2><p class='muted'>HexVault compares Oracle text, keywords, card types and colors across every card you own—even cards unused in decks.</p></div>${deckSeed?`<div class='v126Section v126DiscoveryLead'><div class='muted small'>YOU COULD BUILD</div><h2>${esc(deckSeed)}</h2><p class='muted'>${pattern.cards.length} owned card${pattern.cards.length===1?'':'s'} support this theme. Start with cards such as ${esc(pattern.cards.slice(0,3).map(card=>card.name).join(', '))}.</p><button class='btn accent' type='button' onclick='newDeck()'>＋ Start this deck</button></div>`:''}<div class='v126Section'><h3>Ready with cards you own</h3>${ordered.length?ordered.slice(0,4).map(ideaHTML).join(''):`<p class='muted'>No complete interaction has been confirmed yet. Cards need resolved Oracle text before HexVault can safely identify one.</p>`}</div>${partialIdeas.length?`<div class='v126Section'><h3>Partial combos</h3><p class='muted small'>You own part of these interactions—the missing card is not in your Collection.</p>${partialIdeas.slice(0,4).map(idea=>ideaHTML({...idea,why:`You own ${idea.cards.map(card=>card.name).join(' + ')}. Add ${labelFormat(idea.missing)} to unlock this combo: ${idea.why}`})).join('')}</div>`:''}${unused.length?`<div class='v126Section'><h3>Hidden gem</h3>${ideaHTML({kind:'Unused card',cards:[unused[seed%unused.length]],why:'This card is not currently allocated to an assembled deck. Its mechanics may seed a new build.'})}</div>`:''}<div class='v126Section'><h3>Online deck context</h3><p class='muted small'>Compare this collection-led idea with current external deck and combo sources. HexVault only displays live percentages or prices after a source actually supplies them.</p><div class='stack'><a class='btn wide' target='_blank' rel='noopener' href='https://www.mtggoldfish.com/metagame'>MTGGoldfish · meta share, lists & prices ↗</a><a class='btn wide' target='_blank' rel='noopener' href='https://www.mtgtop8.com/'>MTGTop8 · tournament results ↗</a><a class='btn wide' target='_blank' rel='noopener' href='https://edhrec.com/'>EDHREC · Commander inclusion & synergy ↗</a><a class='btn wide' target='_blank' rel='noopener' href='https://commanderspellbook.com/'>Commander Spellbook · verified combos ↗</a></div></div>`;
+    body.querySelectorAll('.v126Section').forEach(section=>{if(section.querySelector('h3')?.textContent.trim()==='Online deck context')section.remove()});
+  };
+  setInterval(()=>{const today=localDiscoverDay();if(renderedDiscoverDay&&today!==renderedDiscoverDay&&document.getElementById('discover')?.classList.contains('on'))window.renderDiscover()},30000);
 });
 </script>
 <style id="v145-last-style-bulk-start">
@@ -1819,6 +1864,7 @@ requestAnimationFrame(()=>{renderBinderGrid();setScannerKind('bulk')});
   window.refreshHome=function(){
     priorRefresh?.();
     const box=document.getElementById('forYou');if(!box)return;
+    if(!(decks||[]).length){box.className='empty compactEmpty';box.innerHTML=`<b>Create your first deck</b><span class='muted small' style='display:block;margin:5px 0 11px'>Build manually, import a list or scan a physical deck.</span><button class='btn accent' type='button' onclick='newDeck()'>＋ Create deck</button>`;return}
     const pending=(decks||[]).filter(d=>{const g=target(d);return g==null?true:mainCount(d)!==g});
     if(!pending.length){box.className='empty compactEmpty';box.innerHTML='<b>All caught up</b>Your fixed-size decks are at their required card count.';return}
     box.className='';box.innerHTML=pending.slice(0,3).map(d=>{const n=mainCount(d),g=target(d),cover=d.cover||(d.cards||[]).find(c=>c.image)?.image||'';return `<div class='item' onclick='openDeck(${Number(d.id)})'>${cover?`<img src='${esc87(cover)}' style='width:52px;height:72px;object-fit:cover;border-radius:8px'>`:`<div class='thumb'></div>`}<div class='grow'><b>${esc87(d.name)}</b><div class='muted small'>${esc87(d.format||'Casual')}${g?` · ${n} / ${g} cards`:` · ${n} cards`}</div></div><span>→</span></div>`}).join('');
@@ -2202,7 +2248,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{con
  window.submitHexVaultBug=async function(event){
   event.preventDefault();const button=document.getElementById('bugSubmit'),status=document.getElementById('bugReportStatus');button.disabled=true;button.textContent='Sending…';status.className='bugReportStatus muted small';status.textContent='Sending securely to HexVault Support…';
   const include=document.getElementById('bugDiagnostics')?.checked;
-  const diagnostics=include?{page:currentPage(),version:'v166',device:navigator.userAgent,viewport:`${window.innerWidth} × ${window.innerHeight}`,online:navigator.onLine,errors:[...recentErrors]}:{};
+  const diagnostics=include?{page:currentPage(),version:'v168',device:navigator.userAgent,viewport:`${window.innerWidth} × ${window.innerHeight}`,online:navigator.onLine,errors:[...recentErrors]}:{};
   try{const response=await fetch('/api/report-bug',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:document.getElementById('bugCategory')?.value,description:document.getElementById('bugDescription')?.value,contact:document.getElementById('bugContact')?.value,diagnostics})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||'Could not send the report.');status.className='bugReportStatus success small';status.textContent='✓ Report sent to HexVault Support. Thank you!';button.textContent='Sent';setTimeout(()=>window.closeModal?.(),1600)}catch(error){status.className='bugReportStatus error small';status.textContent=error.message||'Could not send the report. Please try again.';button.disabled=false;button.textContent='Try again'}
  };
 })();
@@ -2998,9 +3044,13 @@ try{if(document.getElementById('deckedit')?.classList.contains('on')&&currentDec
   function ownMatches(c){return (collection||[]).filter(o=>{
     if(c.id&&o.id===c.id)return true;
     if((o.name||'').toLowerCase()!==(c.name||'').toLowerCase())return false;
-    return (!o.set||!c.set||o.set===c.set)&&(!o.collector_number||!c.collector_number||String(o.collector_number)===String(c.collector_number));
+    /* A card name/oracle identity is not ownership of every reprint. Without an
+       exact Scryfall id, require the physical set + collector number (+ language). */
+    if(!o.set||!c.set||String(o.set).toLowerCase()!==String(c.set).toLowerCase())return false;
+    if(!o.collector_number||!c.collector_number||String(o.collector_number)!==String(c.collector_number))return false;
+    return !o.lang||!c.lang||String(o.lang).toLowerCase()===String(c.lang).toLowerCase();
   })}
-  function assembledUseForPrinting(c){let n=0;(decks||[]).filter(d=>d.assembled).forEach(d=>(d.cards||[]).forEach(x=>{if((x.name||'').toLowerCase()!==(c.name||'').toLowerCase())return;if(x.set&&c.set&&x.set!==c.set)return;if(x.collector_number&&c.collector_number&&String(x.collector_number)!==String(c.collector_number))return;n+=Number(x.qty)||1}));return n}
+  function assembledUseForPrinting(c){let n=0;(decks||[]).filter(d=>d.assembled).forEach(d=>(d.cards||[]).forEach(x=>{if((x.name||'').toLowerCase()!==(c.name||'').toLowerCase())return;if(!x.set||!c.set||String(x.set).toLowerCase()!==String(c.set).toLowerCase())return;if(!x.collector_number||!c.collector_number||String(x.collector_number)!==String(c.collector_number))return;if(x.lang&&c.lang&&String(x.lang).toLowerCase()!==String(c.lang).toLowerCase())return;n+=Number(x.qty)||1}));return n}
   function ownedInfo(c){const rows=ownMatches(c),owned=rows.reduce((s,x)=>s+(Number(x.qty)||1),0),used=assembledUseForPrinting(c);return {owned,used,available:Math.max(0,owned-used)}}
   function norm(c){return {id:c.id,oracle_id:c.oracle_id,name:c.name,printed_name:c.printed_name||c.name,set:c.set,set_name:c.set_name||c.set?.toUpperCase()||'',collector_number:c.collector_number||'',lang:c.lang||'en',finish:(c.finishes||[]).includes('nonfoil')?'nonfoil':((c.finishes||[])[0]||'nonfoil'),image:img(c),type_line:c.type_line||'',mana_value:Number(c.cmc)||0,colors:c.color_identity||c.colors||[],price_eur:parseFloat(c.prices?.eur||c.prices?.eur_foil||0)||0,legalities:c.legalities||{},keywords:c.keywords||[],released_at:c.released_at||'',frame_effects:c.frame_effects||[],border_color:c.border_color||''}}
   window.searchDeckCard=async function(){
