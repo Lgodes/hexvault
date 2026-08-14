@@ -1,5 +1,7 @@
 const RULES_HUB = 'https://magic.wizards.com/en/rules';
 const MAX_SOURCE = 900000;
+const RULES_TTL = 12*60*60*1000;
+let rulesCache={savedAt:0,value:null};
 
 function json(statusCode, body){return {statusCode,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'},body:JSON.stringify(body)}}
 function extractOutput(data){
@@ -37,15 +39,16 @@ function normalizeJudgeOutput(value={}){
   return {status:(out.status==='clarify'||(!quick&&clarification))?'clarify':'answer',quick,clarification,explain,judgeDetail,references:Array.isArray(out.references)?out.references:[]};
 }
 function decodeHtml(s=''){return s.replace(/&amp;/g,'&').replace(/&#x2F;/gi,'/').replace(/&quot;/g,'"').replace(/&#39;/g,"'")}
-async function fetchText(url){const r=await fetch(url,{headers:{'user-agent':'HexVaultRules/2.0 (+rules assistant)'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return (await r.text()).slice(0,MAX_SOURCE)}
+async function fetchText(url,timeoutMs=4500){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);try{const r=await fetch(url,{signal:controller.signal,headers:{'user-agent':'HexVaultRules/2.1 (+rules assistant)'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);return (await r.text()).slice(0,MAX_SOURCE)}finally{clearTimeout(timer)}}
 async function currentComprehensiveRules(){
+  if(rulesCache.value&&Date.now()-rulesCache.savedAt<RULES_TTL)return rulesCache.value;
   const html=await fetchText(RULES_HUB);
   const links=[...html.matchAll(/href=["']([^"']+)["'][^>]*>(?:\s*<[^>]+>)*\s*TXT\s*/gi)].map(m=>decodeHtml(m[1]));
   let url=links[0];
   if(!url){const candidates=[...html.matchAll(/https?:\/\/media\.wizards\.com\/[^"'<>\s]+/gi)].map(m=>decodeHtml(m[0]));url=candidates.find(x=>/MagicCompRules|\.txt(?:\?|$)/i.test(x));}
   if(!url) throw new Error('Current Comprehensive Rules TXT link not found on Wizards rules hub');
   if(url.startsWith('/')) url=new URL(url,RULES_HUB).href;
-  return {url,text:await fetchText(url)};
+  const value={url,text:await fetchText(url,6500)};rulesCache={savedAt:Date.now(),value};return value;
 }
 function terms(q){const stop=new Set('the a an and or to of in on at for from with without is are was were be been being do does did what when where who why how can could would should i me my you your it this that these those have has had if then than as by about game magic mtg card cards'.split(' '));return [...new Set((q.toLowerCase().match(/[a-z0-9+\-/]{3,}/g)||[]).filter(x=>!stop.has(x)))].slice(0,30)}
 function retrieve(text,q){
@@ -59,9 +62,10 @@ function retrieve(text,q){
   }
   scored.sort((a,b)=>b.score-a.score); const picked=[]; const used=[];
   for(const s of scored){if(used.some(i=>Math.abs(i-s.i)<9))continue;used.push(s.i);picked.push(lines.slice(Math.max(0,s.i-4),Math.min(lines.length,s.i+10)).join('\n'));if(picked.length>=7)break;}
-  return picked.join('\n\n--- relevant rules excerpt ---\n\n').slice(0,24000);
+  return picked.join('\n\n--- relevant rules excerpt ---\n\n').slice(0,12000);
 }
 function attachedCards(body){const cards=Array.isArray(body.cards)?body.cards:[];return cards.slice(0,12).map(c=>({name:String(c.name||'').slice(0,120),oracle_text:String(c.oracle_text||c.oracle||c.text||'').slice(0,1800),type_line:String(c.type_line||c.type||'').slice(0,300)})).filter(c=>c.name||c.oracle_text)}
+function needsWebResearch(question='',cards=[]){return cards.length>=2||question.length>180||/\b(current|latest|recent|today|tournament|policy|mtr|ipg|penalty|infraction|official ruling|judge ruling|web|online|source|citation|interaction|interact|combo|simultaneously|replacement|layer|timestamp|loop|copy)\b/i.test(question)}
 
 export async function handler(event){
   if(event.httpMethod!=='POST') return json(405,{error:'Method not allowed'});
@@ -70,11 +74,11 @@ export async function handler(event){
   const question=String(body.question||'').trim().slice(0,5000);if(!question)return json(400,{error:'Ask a rules question first.'});
   const history=(Array.isArray(body.history)?body.history:[]).slice(-8).map(x=>({role:x?.role==='assistant'?'assistant':'user',content:String(x?.content||'').slice(0,2500)})).filter(x=>x.content);
 
-  let cr={url:RULES_HUB,text:''}, excerpts='', sourceWarning='';
-  try{cr=await currentComprehensiveRules();excerpts=retrieve(cr.text,question)}catch(e){sourceWarning=e.message}
+  const cards=attachedCards(body),useResearch=body.research===true||needsWebResearch(question,cards);
+  let cr={url:RULES_HUB,text:''}, excerpts='', sourceWarning='Fast answer mode — live source retrieval was not required.';
+  if(useResearch)try{cr=await currentComprehensiveRules();excerpts=retrieve(cr.text,question);sourceWarning=''}catch(e){sourceWarning=e.message}
   let tournament='';
-  if(process.env.WIZARDS_MTR_URL){try{tournament=retrieve(await fetchText(process.env.WIZARDS_MTR_URL),question)}catch{}}
-  const cards=attachedCards(body);
+  if(useResearch&&process.env.WIZARDS_MTR_URL){try{tournament=retrieve(await fetchText(process.env.WIZARDS_MTR_URL),question)}catch{}}
 
   const instructions=`You are HexVault Judge, a Magic: The Gathering rules assistant. Your job is to interpret CURRENT official rules, not keyword-match and not guess.
 AUTHORITATIVE ORDER: (1) supplied current Wizards Comprehensive Rules excerpts, (2) supplied official tournament-policy excerpts when present, (3) supplied current Oracle text for attached cards. Never invent a rule number or source. Understand natural language, informal card descriptions, paraphrases, spelling mistakes, and terminology in the user's language; do not require the player to quote an official rule or use an exact formula.
@@ -89,13 +93,16 @@ Return ONLY JSON with keys: status ("answer" or "clarify"), quick, clarification
 
   const input=`Return the Judge ruling as one JSON object matching the required schema.\n\nRECENT CONVERSATION:\n${history.length?JSON.stringify(history,null,2):'None'}\n\nPLAYER QUESTION:\n${question}\n\nATTACHED CARD ORACLE TEXT:\n${cards.length?JSON.stringify(cards,null,2):'None'}\n\nCURRENT WIZARDS COMPREHENSIVE RULES — RETRIEVED EXCERPTS:\n${excerpts||'[No relevant excerpt retrieved]'}\n\nOFFICIAL TOURNAMENT POLICY EXCERPTS:\n${tournament||'[Not supplied for this request]'}\n\nSOURCE STATUS:\nComprehensive Rules URL: ${cr.url}\n${sourceWarning?`Warning: ${sourceWarning}`:'Current rules document retrieved from the Wizards rules hub.'}`;
   try{
-    const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'content-type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_JUDGE_MODEL||'gpt-5-mini',instructions,input,tools:[{type:'web_search'}],max_output_tokens:1800})});
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),22000);
+    const payload={model:process.env.OPENAI_JUDGE_MODEL||'gpt-5-mini',instructions,input,max_output_tokens:1200,reasoning:{effort:'low'},text:{format:{type:'json_schema',name:'judge_ruling',strict:true,schema:{type:'object',additionalProperties:false,properties:{status:{type:'string',enum:['answer','clarify']},quick:{type:'string'},clarification:{type:'string'},explain:{type:'string'},judgeDetail:{type:'string'},references:{type:'array',items:{type:'object',additionalProperties:false,properties:{label:{type:'string'},section:{type:'string'},url:{type:'string'}},required:['label','section','url']}}},required:['status','quick','clarification','explain','judgeDetail','references']}}}};
+    if(useResearch)payload.tools=[{type:'web_search'}];
+    let r;try{r=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:controller.signal,headers:{authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'content-type':'application/json'},body:JSON.stringify(payload)})}finally{clearTimeout(timer)}
     const data=await r.json();if(!r.ok){
       const code=data?.error?.code||data?.error?.type||String(r.status);console.error('HexVault Judge API error',code);
       if(['insufficient_quota','credit_balance_exhausted','billing_hard_limit_reached'].includes(code))return json(503,{error:'The Judge API account has no available credit. Add API credit in OpenAI billing, then try again.'});
       if(r.status===401)return json(503,{error:'The Judge API key was rejected. Replace OPENAI_API_KEY in Vercel and redeploy.'});
       if(r.status===429)return json(503,{error:'The Judge is temporarily rate-limited. Wait a moment and try again.'});
-      return json(502,{error:'The Judge service could not complete this question. Please try again.'});
+      return json(502,{error:`OpenAI rejected this Judge request (${code}). Please try again.`});
     }
     const rawAnswer=extractOutput(data);
     let out;
@@ -107,7 +114,7 @@ Return ONLY JSON with keys: status ("answer" or "clarify"), quick, clarification
     if(out.status==='answer'&&!out.quick)return json(502,{error:'The Judge returned sources but no readable ruling. Please ask again.'});
     for(const source of extractWebCitations(data))if(!out.references.some(x=>x.url===source.url))out.references.push(source);
     if(excerpts && !out.references.some(x=>String(x.url||'').includes('wizards')))out.references.push({label:'Magic Comprehensive Rules',section:'Relevant rules retrieved for this question',url:cr.url});
-    return json(200,out);
-  }catch{return json(502,{error:'Could not reach the rules assistant. Try again.'})}
+    return json(200,{...out,researchUsed:useResearch});
+  }catch(error){if(error?.name==='AbortError')return json(504,{error:'The Judge took too long to answer. Please try once more.'});return json(502,{error:'Could not reach the rules assistant. Try again.'})}
 }
 export {extractOutput,parseJudgeOutput,normalizeJudgeOutput};
