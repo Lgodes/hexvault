@@ -284,7 +284,7 @@ body{min-height:100dvh}
 <div class='settingsGroup'><div class='settingsLabel'>ACCESSIBILITY</div><div class='settingsPanel settingsRows'><label class='settingsRow'><span><b>Reduce motion</b><small>Reduce animated effects including coin and D20</small></span><input id='reduceMotion' type='checkbox'></label></div></div>
 <div class='settingsGroup'><div class='settingsLabel'>DATA & BACKUP</div><div class='settingsPanel'><div class='dataStatus'><span class='statusDot'></span><div><b>Stored on this device</b><div id='durableStorageText' class='muted small'>Checking durable local storage…</div></div></div><div class='settingsActionGrid'><button class='btn accent' onclick='exportBackup()'>Export backup</button><button class='btn' onclick="document.getElementById('restoreBackupInput').click()">Import backup</button><button class='btn' onclick='openRecentlyDeleted()'>Recently deleted</button><button class='btn' onclick='runDiagnostics()'>Diagnostics</button></div><input id='restoreBackupInput' type='file' accept='application/json,.json' style='display:none'><p id='backupStatus' class='muted small'></p></div></div>
 <div class='settingsGroup'><div class='settingsLabel'>SUPPORT</div><div class='settingsPanel'><div class='dataStatus'><span class='supportGlyph'>!</span><div><b>Found a problem?</b><div class='muted small'>Report it directly inside HexVault. The report is delivered to HexVault Support.</div></div></div><button class='btn accent wide supportReportButton' type='button' onclick='reportHexVaultProblem()'>Report a bug</button><p class='muted small supportPrivacy'>HexVault can include the current page, version, device/browser, connection status, and recent app errors. Cards, decks, wishlist, profile, and collection are never included.</p></div></div>
-<div class='settingsGroup'><div class='settingsLabel'>ABOUT</div><div class='settingsPanel settingsRows'><div class='settingsRow'><span><b>HexVault</b><small>Version 176 · PWA</small></span><span class='muted'>v176</span></div><div class='settingsRow'><span><b>Cloud sync</b><small>Not configured yet</small></span><span class='muted'>Local</span></div></div></div></section>
+<div class='settingsGroup'><div class='settingsLabel'>ABOUT</div><div class='settingsPanel settingsRows'><div class='settingsRow'><span><b>HexVault</b><small>Version 177 · PWA</small></span><span class='muted'>v177</span></div><div class='settingsRow'><span><b>Cloud sync</b><small>Not configured yet</small></span><span class='muted'>Local</span></div></div></div></section>
 <nav class='bottom'>
 <div class='nav on' onclick="go('home',this)"><span class='navIcon'><svg viewBox='0 0 24 24'><path d='M4 11.5 12 5l8 6.5v7.5a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1z'/></svg></span>Home</div>
 <div class='nav' onclick="go('collection',this)"><span class='navIcon'><svg viewBox='0 0 24 24'><rect x='7' y='4' width='11' height='16' rx='2'/><path d='M7 7H5.5A1.5 1.5 0 0 0 4 8.5v9A1.5 1.5 0 0 0 5.5 19H7'/></svg></span>Collection</div>
@@ -2394,9 +2394,48 @@ if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{con
  window.submitHexVaultBug=async function(event){
   event.preventDefault();const button=document.getElementById('bugSubmit'),status=document.getElementById('bugReportStatus');button.disabled=true;button.textContent='Sending…';status.className='bugReportStatus muted small';status.textContent='Sending securely to HexVault Support…';
   const include=document.getElementById('bugDiagnostics')?.checked;
-  const diagnostics=include?{page:currentPage(),version:'v171',device:navigator.userAgent,viewport:`${window.innerWidth} × ${window.innerHeight}`,online:navigator.onLine,errors:[...recentErrors]}:{};
+  const diagnostics=include?{page:currentPage(),version:'v177',device:navigator.userAgent,viewport:`${window.innerWidth} × ${window.innerHeight}`,online:navigator.onLine,errors:[...recentErrors]}:{};
   try{const response=await fetch('/api/report-bug',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:document.getElementById('bugCategory')?.value,description:document.getElementById('bugDescription')?.value,contact:document.getElementById('bugContact')?.value,diagnostics})});const result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||'Could not send the report.');status.className='bugReportStatus success small';status.textContent='✓ Report sent to HexVault Support. Thank you!';button.textContent='Sent';setTimeout(()=>window.closeModal?.(),1600)}catch(error){status.className='bugReportStatus error small';status.textContent=error.message||'Could not send the report. Please try again.';button.disabled=false;button.textContent='Try again'}
  };
+})();
+</script>
+<style id="v177-home-color-wheel-style">
+#colorWheel{border:1px solid #ffffff18;box-shadow:0 0 0 4px #080b12,0 10px 30px #0006}#colorWheel:after{inset:17px;box-shadow:inset 0 0 0 1px #ffffff0d}#colorWheel[data-has-colors="true"]{filter:saturate(1.12) brightness(1.08)}
+</style>
+<script id="v177-home-color-wheel-fix">
+(()=>{
+ const previousRefreshHome=window.refreshHome;
+ function symbols(value){
+  if(Array.isArray(value))return value.map(item=>String(item).toUpperCase()).filter(item=>['W','U','B','R','G'].includes(item));
+  if(typeof value==='string')return [...new Set((value.toUpperCase().match(/[WUBRG]/g)||[]))];
+  return [];
+ }
+ function composition(card){
+  let colors=symbols(card?.colors);
+  if(!colors.length)colors=symbols(card?.color_identity);
+  if(!colors.length&&card?.mana_cost)colors=symbols(card.mana_cost);
+  colors=[...new Set(colors)];
+  if(colors.length>1)return'M';
+  return colors[0]||'C';
+ }
+ function paintWheel(){
+  const wheel=document.getElementById('colorWheel');if(!wheel)return;
+  const counts={W:0,U:0,B:0,R:0,G:0,M:0,C:0};
+  const cards=typeof collection!=='undefined'&&Array.isArray(collection)?collection:[];
+  for(const card of cards){const key=composition(card),quantity=Math.max(1,Number(card?.qty)||1);counts[key]+=quantity}
+  const total=Object.values(counts).reduce((sum,value)=>sum+value,0);
+  const palette={W:'#f4ecd8',U:'#2797d4',B:'#665a76',R:'#e55648',G:'#45a66a',M:'#d0a94b',C:'#929baa'};
+  let cursor=0;const segments=[];
+  for(const key of ['W','U','B','R','G','M','C']){const count=counts[key];if(!count||!total)continue;const end=cursor+(count/total*100);segments.push(`${palette[key]} ${cursor.toFixed(3)}% ${end.toFixed(3)}%`);cursor=end}
+  wheel.style.background=segments.length?`conic-gradient(${segments.join(',')})`:'conic-gradient(#252b38 0 100%)';
+  wheel.dataset.hasColors=segments.length?'true':'false';
+  const labels={W:'White',U:'Blue',B:'Black',R:'Red',G:'Green',M:'Multicolor',C:'Colorless'};
+  wheel.title=Object.entries(counts).filter(([,count])=>count).map(([key,count])=>`${labels[key]}: ${count}`).join(' · ');
+  wheel.setAttribute('aria-label',wheel.title||'No color data');
+ }
+ window.refreshHome=function(){const result=previousRefreshHome?.apply(this,arguments);paintWheel();return result};
+ window.paintHomeColorWheel=paintWheel;
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',paintWheel);else queueMicrotask(paintWheel);
 })();
 </script>
 <script id="v132-deck-edit-tap-and-refresh">
