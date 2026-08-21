@@ -1,7 +1,7 @@
-const VERSION='hexvault-v178';
+const VERSION='hexvault-v180';
 const STATIC=[
   '/', '/index.html', '/manifest.webmanifest',
-  '/logo4.png','/logo4-hd-transparent.png','/coin-epic.png','/d20-epic.png',
+  '/logo4.png','/logo4-hd-transparent.png','/coin-epic.png','/d20-epic.png','/assets/jsQR.min.js',
   '/icons/icon-192.png','/icons/icon-512.png','/icons/maskable-512.png','/icons/apple-touch-icon.png'
 ];
 self.addEventListener('install',event=>{

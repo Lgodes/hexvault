@@ -51,6 +51,7 @@ async function verifiedCandidates(clue){
   return out.sort((a,b)=>Number(sameTitle(clue.visible_title,b.card.printed_name||b.card.name))-Number(sameTitle(clue.visible_title,a.card.printed_name||a.card.name)));
 }
 export default async function handler(req,res){
+  const origin=req.headers.origin;if(origin==='https://localhost'||origin==='capacitor://localhost')res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Allow-Headers','Content-Type');res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');if(req.method==='OPTIONS')return res.status(204).end();
   if(req.method!=='POST')return json(res,405,{error:'POST required'});
   if(!process.env.OPENAI_API_KEY)return json(res,503,{error:'Card recognition is not configured. Add OPENAI_API_KEY in Vercel.'});
   const requestedMode=String(req.body?.mode||'single'),mode=requestedMode==='binder-layout'?'binder-layout':requestedMode==='binder'?'binder':'single',images=Array.isArray(req.body?.images)?req.body.images.slice(0,12).map(String):[],image=String(req.body?.image||''),titleImage=String(req.body?.titleImage||''),nativeOcrText=String(req.body?.nativeOcrText||'').slice(0,2400),composite=Boolean(req.body?.composite),setCodes=Array.isArray(req.body?.sets)?req.body.sets.slice(0,8):[],language=String(req.body?.language||'auto');

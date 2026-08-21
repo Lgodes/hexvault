@@ -3,6 +3,7 @@ const json=(res,status,body)=>res.status(status).json(body);
 const clean=(value,max=4000)=>String(value??'').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').trim().slice(0,max);
 
 export default async function handler(req,res){
+  const origin=req.headers.origin;if(origin==='https://localhost'||origin==='capacitor://localhost')res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Allow-Headers','Content-Type');res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');if(req.method==='OPTIONS')return res.status(204).end();
   if(req.method!=='POST')return json(res,405,{error:'Method not allowed'});
   const token=process.env.RESEND_API_KEY;
   if(!token)return json(res,503,{error:'Bug reporting is not configured yet. Add RESEND_API_KEY in Vercel.'});
