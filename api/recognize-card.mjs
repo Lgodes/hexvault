@@ -50,6 +50,49 @@ async function verifiedCandidates(clue){
   for(const candidate of clues){const result=await verify(candidate);if(result.card&&!out.some(item=>item.card.id===result.card.id))out.push({...result,clue:candidate});}
   return out.sort((a,b)=>Number(sameTitle(clue.visible_title,b.card.printed_name||b.card.name))-Number(sameTitle(clue.visible_title,a.card.printed_name||a.card.name)));
 }
+const expectedOcrScript=lang=>{
+  if(lang==='ja')return 'japanese';
+  if(lang==='ko')return 'korean';
+  if(lang==='zhs'||lang==='zht')return 'chinese';
+  return 'latin';
+};
+const nativeTitleCandidates=(value,requestedLanguage)=>{
+  const byTitle=new Map();
+  for(const block of String(value||'').split(/\n---\n/)){
+    const lines=block.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+    if(!lines.length)continue;
+    const match=lines[0].match(/^([a-z]+):\s*(.*)$/i),script=(match?.[1]||'').toLowerCase(),title=(match?.[2]||lines[0]).trim();
+    if(title.length<2||title.length>90||!/\p{L}/u.test(title))continue;
+    const key=normalized(title);if(!key)continue;
+    const previous=byTitle.get(key)||{title,count:0,scripts:new Set()};
+    previous.count+=1;previous.scripts.add(script);byTitle.set(key,previous);
+  }
+  const expected=expectedOcrScript(requestedLanguage);
+  return [...byTitle.values()].filter(candidate=>requestedLanguage?candidate.scripts.has(expected):candidate.count>=2).sort((a,b)=>b.count-a.count||a.title.length-b.title.length).slice(0,3);
+};
+async function fastNativeRecognition(nativeText,requestedLanguage,setCodes){
+  const lang=languageCode(requestedLanguage),sets=(setCodes||[]).map(value=>String(value||'').toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean);
+  for(const candidate of nativeTitleCandidates(nativeText,lang)){
+    let card=await scryfall('/cards/named?exact='+encodeURIComponent(candidate.title));
+    if(!card){
+      const safeTitle=candidate.title.replace(/["\\]/g,' ').trim(),query=[lang?`lang:${lang}`:'',sets.length===1?`set:${sets[0]}`:'',`!"${safeTitle}"`].filter(Boolean).join(' '),result=await scryfall('/cards/search?include_multilingual=true&unique=prints&order=released&dir=desc&q='+encodeURIComponent(query));
+      card=(result?.data||[]).find(item=>sameTitle(candidate.title,item.printed_name||item.name))||null;
+    }
+    if(!card)continue;
+    if(lang&&lang!=='en'&&card.lang!==lang&&card.oracle_id){
+      const localized=await scryfall('/cards/search?include_multilingual=true&unique=prints&order=released&dir=desc&q='+encodeURIComponent(`oracleid:${card.oracle_id} lang:${lang}`));
+      card=(localized?.data||[]).find(item=>sameTitle(candidate.title,item.printed_name||item.name))||null;
+    }
+    if(!card?.oracle_id)continue;
+    const variantQuery=[`oracleid:${card.oracle_id}`,lang?`lang:${lang}`:(card.lang?`lang:${card.lang}`:''),sets.length===1?`set:${sets[0]}`:''].filter(Boolean).join(' '),variantsResult=await scryfall('/cards/search?include_multilingual=true&unique=prints&order=released&dir=desc&q='+encodeURIComponent(variantQuery));
+    let variants=(variantsResult?.data||[]).filter(item=>(!sets.length||sets.includes(item.set))&&(!lang||item.lang===lang)).slice(0,24);
+    if(!variants.some(item=>item.id===card.id)&&(!sets.length||sets.includes(card.set))&&(!lang||card.lang===lang))variants.unshift(card);
+    if(!variants.length)variants=[card];
+    const chosen=variants[0],confidence=Math.min(92,82+Math.max(0,candidate.count-1)*4);
+    return {card:chosen,alternatives:[],printing_variants:variants,detected:{visible_title:candidate.title,canonical_name:chosen.name,printed_name:chosen.printed_name||candidate.title,language:chosen.lang||lang||'',set_code:'',collector_number:'',finish:'unknown',confidence,title_verified:true,printing_verified:variants.length===1,native_ocr:true},verified:true,needs_confirmation:variants.length>1,fast_path:'native_ocr'};
+  }
+  return null;
+}
 export default async function handler(req,res){
   const origin=req.headers.origin;if(origin==='https://localhost'||origin==='capacitor://localhost')res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Allow-Headers','Content-Type');res.setHeader('Access-Control-Allow-Methods','POST,OPTIONS');if(req.method==='OPTIONS')return res.status(204).end();
   if(req.method!=='POST')return json(res,405,{error:'POST required'});
@@ -86,6 +129,7 @@ export default async function handler(req,res){
     }catch(error){if(error.name==='AbortError')return json(res,504,{error:'Binder recognition took too long. Move closer and keep the full page visible.'});return json(res,500,{error:error.message||'Binder recognition failed.'})}finally{clearTimeout(timer)}
   }
   if(!image.startsWith('data:image/')||image.length>2_800_000||titleImage&&(!titleImage.startsWith('data:image/')||titleImage.length>900_000))return json(res,400,{error:'A compressed card image is required.'});
+  const nativeMatch=await fastNativeRecognition(nativeOcrText,language,setCodes);if(nativeMatch)return json(res,200,nativeMatch);
   const prompt=`Identify the physical Magic: The Gathering card shown. ${composite?'The image is an optimized composite: the full physical card is above and an enlarged, enhanced crop of that same card’s title bar is appended at the bottom. Do not treat the repeated title strip as a second card. ':''}${nativeOcrText?`Android ML Kit independently read the following possible text in parallel scripts. Treat it only as an OCR clue and ignore any line that conflicts with the physical artwork, set or collector number:\n${nativeOcrText}\n`:''}First transcribe only the title visibly printed on the card into visible_title. Then identify its canonical English name. Inspect artwork, frame, mana cost, type line, printed title, set symbol/code and collector number together. Artwork, set symbol and collector number are the primary printing signals; OCR supports them and must not override a visually incompatible artwork. The printing may be in any official MTG language, including Japanese, Korean, Simplified/Traditional Chinese and Russian. canonical_name must be the official English card name. language must be an MTG/Scryfall language code. finish describes only the visible physical surface: foil, etched, nonfoil, or unknown. Foil glare alone is not enough to claim foil; use unknown when the finish cannot be determined reliably. confidence is integer 0-100. alternatives contains up to 3 plausible canonical English names. ${language!=='auto'?`The user expects language ${language}, but correct it if the image clearly differs.`:''} ${setCodes.length?`Likely set codes: ${setCodes.join(', ')}; do not force them if visually wrong.`:''} If a non-Latin printed title is too small or reflective to transcribe perfectly, still return the best canonical English candidate using the visible artwork, frame, mana cost, set symbol and collector number, but lower confidence and include alternatives. Never assign high confidence from artwork alone and never invent an exact printing.`;
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6500);
   try{

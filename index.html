@@ -2294,7 +2294,7 @@ requestAnimationFrame(()=>{renderBinderGrid();setScannerKind('bulk')});
 </script>
 <script id="v181-deck-links">
 (function(){
-  const PUBLIC_URL='https://hexvault-t3qg-3kzf2rv5s-lgodes-projects.vercel.app';
+  const PUBLIC_URL='https://hexvault-t3qg.vercel.app';
   function currentDeckRecord(){return (decks||[]).find(row=>String(row.id)===String(currentDeck))}
   function readableDeckList(deck){
     const groups=[['Main Deck','main'],['Sideboard','sideboard']],lines=[deck.name||'HexVault deck',deck.format||'Casual',''];
@@ -2319,6 +2319,84 @@ requestAnimationFrame(()=>{renderBinderGrid();setScannerKind('bulk')});
   if(query&&!location.hash.startsWith('#deck=')){history.replaceState(null,'',location.pathname+'#deck='+query);setTimeout(()=>window.checkDeckHash?.(),0)}
   const oldPayload=window.qrPayload;window.qrPayload=function(raw){const value=String(raw||'').trim();try{const url=new URL(value);const payload=url.searchParams.get('deck');if(payload)return payload}catch(error){}return oldPayload?oldPayload(value):''};
 })();
+</script>
+<style id="v191-reliable-camera-style">
+.scanCameraStage.v191Capturing .scanCorners{filter:drop-shadow(0 0 13px #b69aff);animation:v191GuidePulse .55s ease-in-out infinite alternate}.scanCameraStage.v191Capturing .scanShutter{pointer-events:none;opacity:.72}@keyframes v191GuidePulse{to{transform:translate(-50%,-50%) scale(1.012)}}
+</style>
+<script id="v191-reliable-camera-recognition">
+(()=>{
+ let busy=false,activeController=null;
+ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ const message=text=>{const status=document.getElementById('scanStatus'),note=document.getElementById('cameraNote');if(status)status.textContent=text;if(note)note.textContent=text};
+ const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+ function guideSourceRect(video){
+  const view=video.getBoundingClientRect(),guide=document.querySelector('.scanCorners')?.getBoundingClientRect(),vw=video.videoWidth,vh=video.videoHeight;
+  if(!view.width||!view.height||!guide?.width||!vw||!vh)return {x:vw*.17,y:vh*.06,w:vw*.66,h:vh*.88};
+  /* The preview uses object-fit: cover. Convert the purple guide's real CSS
+     rectangle back into raw camera pixels instead of assuming every phone
+     crops its camera in the same way. */
+  const scale=Math.max(view.width/vw,view.height/vh),renderedW=vw*scale,renderedH=vh*scale,hiddenX=(renderedW-view.width)/2,hiddenY=(renderedH-view.height)/2;
+  let x=(guide.left-view.left+hiddenX)/scale,y=(guide.top-view.top+hiddenY)/scale,w=guide.width/scale,h=guide.height/scale;
+  const padX=w*.035,padY=h*.025;x-=padX;y-=padY;w+=padX*2;h+=padY*2;
+  x=clamp(x,0,vw-2);y=clamp(y,0,vh-2);w=clamp(w,2,vw-x);h=clamp(h,2,vh-y);
+  return {x,y,w,h};
+ }
+ function sharpness(canvas){
+  const sample=document.createElement('canvas'),width=180,height=56;sample.width=width;sample.height=height;const ctx=sample.getContext('2d',{willReadFrequently:true});ctx.drawImage(canvas,0,0,canvas.width,Math.max(1,canvas.height*.2),0,0,width,height);const data=ctx.getImageData(0,0,width,height).data,gray=new Float32Array(width*height);let mean=0;
+  for(let i=0,p=0;i<data.length;i+=4,p++){gray[p]=data[i]*.299+data[i+1]*.587+data[i+2]*.114;mean+=gray[p]}mean/=gray.length;
+  let edges=0,count=0;for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){const p=y*width+x,gx=gray[p+1]-gray[p-1],gy=gray[p+width]-gray[p-width];edges+=gx*gx+gy*gy;count++}
+  const exposurePenalty=Math.abs(mean-132)*3;return edges/Math.max(1,count)-exposurePenalty;
+ }
+ function captureCandidate(video){
+  const source=guideSourceRect(video),canvas=document.createElement('canvas'),width=840,height=Math.round(width*680/488),ctx=canvas.getContext('2d',{alpha:false});canvas.width=width;canvas.height=height;ctx.fillStyle='#07090d';ctx.fillRect(0,0,width,height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(video,source.x,source.y,source.w,source.h,0,0,width,height);
+  return {canvas,source,score:sharpness(canvas)};
+ }
+ function encodeCandidate(candidate,video){
+  const canvas=candidate.canvas,title=document.createElement('canvas'),titleWidth=1100,titleHeight=230,titleCtx=title.getContext('2d',{alpha:false});title.width=titleWidth;title.height=titleHeight;titleCtx.fillStyle='#f0eee8';titleCtx.fillRect(0,0,titleWidth,titleHeight);titleCtx.filter='contrast(1.34) brightness(1.1) saturate(.8)';titleCtx.drawImage(video,candidate.source.x,candidate.source.y,candidate.source.w,candidate.source.h*.205,0,0,titleWidth,titleHeight);titleCtx.filter='none';
+  return {image:canvas.toDataURL('image/jpeg',.84),titleImage:title.toDataURL('image/jpeg',.9),composite:false};
+ }
+ async function captureBurst(video,count=4){
+  const frames=[];for(let i=0;i<count;i++){frames.push(captureCandidate(video));if(i<count-1)await wait(85)}frames.sort((a,b)=>b.score-a.score);return encodeCandidate(frames[0],video);
+ }
+ function cardImage(card,large=false){const faces=card?.card_faces||[];return large?(card?.image_uris?.large||card?.image_uris?.png||faces[0]?.image_uris?.large||card?.image_uris?.normal||faces[0]?.image_uris?.normal||''):(card?.image_uris?.normal||faces[0]?.image_uris?.normal||card?.image_uris?.small||faces[0]?.image_uris?.small||'')}
+ function record(card,confidence,detectedLanguage){return {id:card.id,oracle_id:card.oracle_id||'',name:card.name,printed_name:card.printed_name||'',set:card.set,set_name:card.set_name,collector_number:card.collector_number,lang:card.lang||detectedLanguage||'en',image:cardImage(card),image_large:cardImage(card,true),oracle_text:card.oracle_text||card.card_faces?.map(face=>face.oracle_text).filter(Boolean).join(' // ')||'',type_line:card.type_line||card.card_faces?.map(face=>face.type_line).filter(Boolean).join(' // ')||'',mana_value:Number(card.cmc)||0,colors:card.color_identity||[],rarity:card.rarity||'',legalities:card.legalities||{},keywords:card.keywords||[],finishes:(card.finishes||['nonfoil']).filter(value=>['nonfoil','foil','etched'].includes(value)),promo_types:card.promo_types||[],frame_effects:card.frame_effects||[],prices:card.prices||{},confidence,detected_language:detectedLanguage||card.lang||''}}
+ function desiredFinish(card){const label=document.getElementById('nextFinishControl')?.textContent||'',wanted=/etched/i.test(label)?'etched':/foil/i.test(label)?'foil':'nonfoil',available=card.finishes||['nonfoil'];return available.includes(wanted)?wanted:(available.includes('nonfoil')?'nonfoil':available[0]||'nonfoil')}
+ function accept(card,confidence,language){window._scanDetectedLanguage=language||card.lang||'';window._scanDetectedFinish='unknown';window._pendingScanConfidence=confidence;window._scanCandidateCards=[card];window._scanConfidenceByName={[card.name]:confidence};window.HexVaultOfflineCards?.cacheCards?.([card]);lastCard=record(card,confidence,window._scanDetectedLanguage);window.confirmFinish(desiredFinish(lastCard));}
+ window.v191ChooseScannedPrinting=function(index){const card=window._v191PrintingChoices?.[Number(index)];if(!card)return;document.getElementById('modal')?.classList.remove('on');accept(card,Math.min(79,Number(window._v191PrintingConfidence)||79),window._v191PrintingLanguage||card.lang)};
+ function choosePrinting(cards,confidence,language){const unique=(cards||[]).filter((card,index,array)=>card?.id&&array.findIndex(other=>other.id===card.id)===index);if(!unique.length)return false;window._v191PrintingChoices=unique;window._v191PrintingConfidence=confidence;window._v191PrintingLanguage=language;const escText=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])),title=document.getElementById('sheetTitle'),body=document.getElementById('sheetBody');title.textContent='Choose the exact printing';body.innerHTML=`<p class='scanVariantHint'>Card recognized. Compare the artwork and select the physical printing you scanned.</p><div class='scanVariantRail'>${unique.map((card,index)=>{const image=cardImage(card,true)||cardImage(card);return `<button class='scanVariantCard' type='button' onclick='v191ChooseScannedPrinting(${index})'>${image?`<img src='${escText(image)}' alt='${escText(card.printed_name||card.name)}'>`:''}<b>${escText(card.printed_name||card.name)}</b><div class='variantMeta'>${escText(card.set_name||'')} · ${String(card.set||'').toUpperCase()} #${escText(card.collector_number||'')}<br>${String(card.lang||language||'').toUpperCase()}</div><span class='variantSelect'>Select this printing</span></button>`}).join('')}</div>`;document.getElementById('modal')?.classList.add('on');return true}
+ async function nativeOcr(image){
+  if(typeof window.HexVaultNative?.recognizeText!=='function')return '';
+  const id='v191-'+Date.now()+'-'+Math.random().toString(36).slice(2);return new Promise(resolve=>{let complete=false;const finish=value=>{if(complete)return;complete=true;clearTimeout(timer);window.removeEventListener('hexvault-native-ocr',listener);resolve(String(value||'').slice(0,2400))},listener=event=>{if(event.detail?.id!==id)return;const rows=(event.detail?.candidates||[]).map(row=>`${row.script}: ${row.text}`).filter(Boolean);finish(rows.join('\n---\n')||event.detail?.text||'')},timer=setTimeout(()=>finish(''),900);window.addEventListener('hexvault-native-ocr',listener);try{window.HexVaultNative.recognizeText(image,id)}catch(_){finish('')}})
+ }
+ async function requestRecognition(captured,signal){
+  const nativeOcrText=await nativeOcr(captured.titleImage||captured.image);const response=await fetch('/api/recognize-card',{method:'POST',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...captured,nativeOcrText,language:lang||'auto',sets:selectedSets||[]})}),data=await response.json().catch(()=>({}));return {response,data};
+ }
+ function friendlyError(status,data){const labels={400:'The captured frame was unusable',401:'Recognition key rejected',404:'Recognition service is missing',422:'I could not verify this card',429:'Recognition credit or rate limit reached',500:'Recognition service error',502:'Recognition model error',503:'Recognition is not configured',504:'Recognition timed out'};return `${labels[status]||'Recognition failed'}${data?.error?' · '+data.error:''}`}
+ window.scanCameraCard=async function(){
+  if(busy)return;const video=document.getElementById('camera');if(!stream){await startCamera();if(!stream)return}if(!video?.videoWidth){message('Camera is focusing…');await wait(350);if(!video?.videoWidth)return}
+  busy=true;document.querySelector('.scanCameraStage')?.classList.add('v191Capturing','bulkRunning');window._scanCandidateCards=[];lastCard=null;_scanSourceWasCamera=true;const started=performance.now();
+  try{
+   message('Hold still · choosing the sharpest frame…');let captured=await captureBurst(video,4),attempt=0,result;
+   while(attempt<2){
+    activeController=new AbortController();const timeout=setTimeout(()=>activeController?.abort(),9500);message(attempt?'Refocusing · checking once more…':'Reading card name, language and printing…');
+    try{result=await requestRecognition(captured,activeController.signal)}finally{clearTimeout(timeout)}
+    if(result.response.ok)break;
+    if(attempt===0&&[422,500,502,504].includes(result.response.status)){attempt++;await wait(320);captured=await captureBurst(video,3);continue}
+    throw Error(friendlyError(result.response.status,result.data));
+   }
+   const {data}=result,card=data.card;if(!card?.id)throw Error('I could not verify this card');const alternatives=(data.alternatives||[]).filter(Boolean),confidence=clamp(Number(data.detected?.confidence)||0,0,100),language=data.detected?.language||card.lang||'';window.stopBulkAuto?.();
+   if(data.needs_confirmation){const variants=(data.printing_variants||[]).filter(Boolean);message(`Card recognized ✓ · choose the artwork · ${language.toUpperCase()}`);if(choosePrinting(variants.length?variants:[card,...alternatives],confidence,language))return}
+   const elapsed=((performance.now()-started)/1000).toFixed(1);message(`Found ✓ · ${String(card.set||'').toUpperCase()} #${card.collector_number||''} · ${language.toUpperCase()} · ${elapsed}s`);accept(card,confidence,language);
+  }catch(error){if(error.name==='AbortError')message('Recognition timed out · keep the card still and tap Scan');else message(`${error.message||'Card not found'} · tap Scan to retry`);document.querySelector('.scanCameraStage')?.classList.remove('bulkRunning');window.stopBulkAuto?.()}
+  finally{busy=false;activeController=null;document.querySelector('.scanCameraStage')?.classList.remove('v191Capturing')}
+ };
+ window.v191ScanCameraCard=window.scanCameraCard;
+ const oldStart=window.startCamera;window.startCamera=async function(){const result=await oldStart?.apply(this,arguments);try{const track=stream?.getVideoTracks?.()[0],caps=track?.getCapabilities?.()||{},advanced=[];if(caps.focusMode?.includes?.('continuous'))advanced.push({focusMode:'continuous'});if(caps.exposureMode?.includes?.('continuous'))advanced.push({exposureMode:'continuous'});if(caps.whiteBalanceMode?.includes?.('continuous'))advanced.push({whiteBalanceMode:'continuous'});if(advanced.length)await track.applyConstraints({advanced})}catch(_){}return result};
+ window.HEXVAULT_BUILD=191;document.querySelectorAll('.settingsRow small').forEach(node=>{if(/Version \d+/.test(node.textContent||''))node.textContent=(node.textContent||'').replace(/Version \d+[^·]*/,'Version 191 ')});document.querySelectorAll('.settingsRow .muted').forEach(node=>{if(/^v\d+$/.test((node.textContent||'').trim()))node.textContent='v191'});
+})();
+</script>
+<script id="v191-final-scanner-wiring">
+window.addEventListener('load',()=>{if(typeof window.v191ScanCameraCard==='function')window.scanCameraCard=window.v191ScanCameraCard});
 </script>
 </body>
 <style id="v71-deck-states-style">
@@ -2515,7 +2593,7 @@ document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{if(window.v123E
 })();
 </script>
 <script id="v129-update-runtime">
-if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{const registration=await navigator.serviceWorker.register('./sw.js?v=190',{updateViaCache:'none'});await registration.update()}catch(error){console.warn('HexVault update check unavailable',error)}});
+if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{const registration=await navigator.serviceWorker.register('./sw.js?v=191',{updateViaCache:'none'});await registration.update()}catch(error){console.warn('HexVault update check unavailable',error)}});
 </script>
 <script id="v189-final-runtime-wiring">
 (()=>{
@@ -3827,7 +3905,7 @@ document.addEventListener('DOMContentLoaded',scan);new MutationObserver(scan).ob
 </style>
 <script id="v180-final-fixes">
 (()=>{
- const VERCEL_API='https://hexvault-t3qg-3kzf2rv5s-lgodes-projects.vercel.app';
+ const VERCEL_API='https://hexvault-t3qg.vercel.app';
  window.HEXVAULT_API_BASE=VERCEL_API;
  const originalFetch=window.fetch.bind(window);
  window.fetch=(input,init)=>{if(typeof input==='string'&&input.startsWith('/api/')&&location.protocol==='capacitor:')input=VERCEL_API+input;return originalFetch(input,init)};
@@ -4179,4 +4257,7 @@ body:has(#life.on){overflow:hidden!important;overscroll-behavior:none!important}
  const previousDetail=window.openCardDetail;window.openCardDetail=function(id,finish){const result=previousDetail?.apply(this,arguments),actions=document.querySelector('#sheetBody .detailActions'),source=findCollectionCopy(id,finish);if(actions&&source&&!actions.querySelector('.v190CollectionPrintingAction')){const button=document.createElement('button');button.type='button';button.className='btn v190CollectionPrintingAction';button.textContent='✦ Change edition / artwork';button.onclick=()=>window.openCollectionPrintingEditorV190(source.id,source.finish||'nonfoil');actions.appendChild(button)}return result};
  window.HEXVAULT_BUILD=190;document.querySelectorAll('.settingsRow small').forEach(node=>{if(/Version \d+/.test(node.textContent||''))node.textContent=(node.textContent||'').replace(/Version \d+[^·]*/,'Version 190 ')});document.querySelectorAll('.settingsRow .muted').forEach(node=>{if(/^v\d+$/.test((node.textContent||'').trim()))node.textContent='v190'});
 })();
+</script>
+<script id="v191-absolute-final-runtime">
+(()=>{const install=()=>{if(typeof window.v191ScanCameraCard==='function')window.scanCameraCard=window.v191ScanCameraCard;window.HEXVAULT_BUILD=191;document.querySelectorAll('.settingsRow small').forEach(node=>{if(/Version \d+/.test(node.textContent||''))node.textContent=(node.textContent||'').replace(/Version \d+[^·]*/,'Version 191 ')});document.querySelectorAll('.settingsRow .muted').forEach(node=>{if(/^v\d+$/.test((node.textContent||'').trim()))node.textContent='v191'})};window.addEventListener('load',install);if(document.readyState==='complete')install()})();
 </script>
