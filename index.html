@@ -335,7 +335,7 @@ window.addEventListener('DOMContentLoaded',function(){
 </style>
 <script id="v189-focused-color-safe-discover">
 (()=>{
- const lower=value=>String(value||'').toLowerCase(),html=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])),attr=value=>html(value).replace(/`/g,'&#96;'),enc=value=>encodeURIComponent(String(value||'')).replace(/'/g,'%27'),key=card=>lower(card?.oracle_id||card?.name||card?.id),text=card=>lower(`${card?.name||''} ${card?.type_line||''} ${card?.oracle_text||''} ${(card?.keywords||[]).join(' ')}`),art=card=>card?.image_large||card?.image_uris?.large||card?.card_faces?.[0]?.image_uris?.large||card?.image||card?.image_uris?.normal||'',uniq=cards=>[...new Map((cards||[]).filter(Boolean).map(card=>[key(card),card])).values()];
+ const lower=value=>String(value||'').toLowerCase(),html=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])),attr=value=>html(value).replace(/`/g,'&#96;'),enc=value=>encodeURIComponent(String(value||'')).replace(/'/g,'%27'),key=card=>lower(card?.oracle_id||card?.name||card?.id),text=card=>lower(`${card?.name||''} ${card?.type_line||''} ${card?.oracle_text||''} ${(card?.keywords||[]).join(' ')}`),art=card=>card?.image_large||card?.image_uris?.large||card?.card_faces?.[0]?.image_uris?.large||card?.image||card?.image_uris?.normal||'',uniq=cards=>[...new Map((Array.isArray(cards)?cards:[]).filter(Boolean).map(card=>[key(card),card])).values()];
  const identity=card=>{const raw=card?.color_identity??card?.colors??[];return new Set(Array.isArray(raw)?raw:String(raw).toUpperCase().match(/[WUBRG]/g)||[])},union=cards=>new Set(cards.flatMap(card=>[...identity(card)])),subset=(card,palette)=>[...identity(card)].every(color=>palette.has(color)),paletteName=palette=>{const value=['W','U','B','R','G'].filter(color=>palette.has(color)).join('');return value||'Colorless'},isLand=card=>/\bland\b/.test(lower(card?.type_line));
  const themes=[
   {id:'discard',title:'Discard turns into value',a:[/discard (?:a|one|your|up to|any number)|you may discard|: discard/],b:[/madness/],roles:['Discard outlet','Madness payoff'],why:'Use the first card to discard the second, then cast the discarded card for its Madness cost instead of losing it.'},
@@ -360,12 +360,12 @@ window.addEventListener('DOMContentLoaded',function(){
  function themePatterns(theme){const match=themes.find(row=>row.id===theme);return match?[...match.a,...match.b]:[]}
  function supports(idea,cards,limit=8){const core=new Set(idea.cards.map(key)),patterns=themePatterns(idea.theme);return cards.filter(card=>!core.has(key(card))&&!isLand(card)&&subset(card,idea.palette)).map(card=>{const source=text(card);let score=patterns.reduce((sum,pattern)=>sum+(pattern.test(source)?4:0),0);score+=(card.keywords||[]).filter(keyword=>idea.cards.some(coreCard=>(coreCard.keywords||[]).includes(keyword))).length*2;return {card,score}}).filter(row=>row.score>0).sort((a,b)=>b.score-a.score||String(a.card.name).localeCompare(String(b.card.name))).slice(0,limit).map(row=>row.card)}
  function seed(){const date=new Date(),stamp=`${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;return [...stamp].reduce((sum,char)=>sum+char.charCodeAt(0),0)}
- function usage(card){const name=lower(card.name);return (decks||[]).reduce((sum,deck)=>sum+(deck.cards||[]).filter(entry=>lower(entry.name)===name).reduce((total,entry)=>total+(Number(entry.qty)||1),0),0)}
+ function usage(card){const name=lower(card.name);return (Array.isArray(decks)?decks:[]).reduce((sum,deck)=>sum+(deck.cards||[]).filter(entry=>lower(entry.name)===name).reduce((total,entry)=>total+(Number(entry.qty)||1),0),0)}
  function spotlightButton(card,className='v189DuoCard',role='Card'){const image=art(card),name=card.printed_name||card.name||'Card';return `<button class='${className}' type='button' ${image?`onclick="openDiscoverSpotlight('${attr(enc(image))}','${attr(enc(name))}')"`:''}>${image?`<img src='${attr(card.image||image)}' alt='${attr(name)}' loading='lazy'>`:`<div class='v180DiscoverMissing'>No artwork</div>`}<b>${html(name)}</b><span>${html(role)}</span></button>`}
  function duo(idea){return `<div class='v189Duo'>${spotlightButton(idea.cards[0],'v189DuoCard',idea.roles?.[0]||'Card')}<div class='v189Plus'>＋</div>${spotlightButton(idea.cards[1],'v189DuoCard',idea.roles?.[1]||'Card')}</div><div class='v189Why'><b>How it works:</b> ${html(idea.why)}</div>`}
  function heading(label,title,description,palette){return `<div class='v189SectionHead'><div><span class='v181Kind'>${html(label)}</span><h2>${html(title)}</h2><p>${html(description)}</p></div>${palette?`<span class='v189Color'>${html(paletteName(palette))}</span>`:''}</div>`}
  function chooseToday(rows,offset=0){if(!rows.length)return null;return rows[(seed()+offset)%rows.length]}
- function model(){const cards=uniq(collection||[]),synergies=interactions(cards),combos=exactCombos(cards),synergy=chooseToday(synergies),combo=chooseToday(combos,3)||chooseToday(synergies.filter(row=>row!==synergy),5),palette=synergy?.palette||combo?.palette||new Set(),support=synergy?supports(synergy,cards,10):[],unused=cards.filter(card=>!isLand(card)&&usage(card)===0&&(!palette.size||subset(card,palette))).sort((a,b)=>(text(b)?1:0)-(text(a)?1:0)||String(a.name).localeCompare(String(b.name))),gem=unused.length?unused[seed()%unused.length]:null,buildCards=uniq([...(synergy?.cards||[]),...support]).slice(0,12),partial=known.map(([a,b,title,why])=>{const first=cards.find(card=>lower(card.name)===a),second=cards.find(card=>lower(card.name)===b);return first&&!second?{owned:first,missing:b,title,why}:second&&!first?{owned:second,missing:a,title,why}:null}).find(Boolean);return {cards,synergy,combo,gem,buildCards,partial}}
+ function model(){const cards=uniq(Array.isArray(collection)?collection:[]),synergies=interactions(cards),combos=exactCombos(cards),synergy=chooseToday(synergies),combo=chooseToday(combos,3)||chooseToday(synergies.filter(row=>row!==synergy),5),palette=synergy?.palette||combo?.palette||new Set(),support=synergy?supports(synergy,cards,10):[],unused=cards.filter(card=>!isLand(card)&&usage(card)===0&&(!palette.size||subset(card,palette))).sort((a,b)=>(text(b)?1:0)-(text(a)?1:0)||String(a.name).localeCompare(String(b.name))),gem=unused.length?unused[seed()%unused.length]:null,buildCards=uniq([...(synergy?.cards||[]),...support]).slice(0,12),partial=known.map(([a,b,title,why])=>{const first=cards.find(card=>lower(card.name)===a),second=cards.find(card=>lower(card.name)===b);return first&&!second?{owned:first,missing:b,title,why}:second&&!first?{owned:second,missing:a,title,why}:null}).find(Boolean);return {cards,synergy,combo,gem,buildCards,partial}}
  function render(){const body=document.getElementById('discoverBody');if(!body)return;const state=model();window._v189Discover=state;if(!state.cards.length){body.className='empty';body.innerHTML='<b>No discoveries yet</b>Add cards to your Collection to reveal exact interactions.';return}const synergy=state.synergy?`<section class='v189Section'>${heading('Today’s synergy',state.synergy.title,'One focused interaction using cards you own.',state.synergy.palette)}${duo(state.synergy)}</section>`:`<section class='v189Section'>${heading('Today’s synergy','No compatible pair confirmed yet','HexVault will show one only when two owned cards have a direct rules-text connection.')}<div class='v189Empty'>No filler suggestion was generated. Add or resolve more card data to unlock a trustworthy interaction.</div></section>`,combo=state.combo?`<section class='v189Section'>${heading('Sick combo',state.combo.title,'Two exact cards that make a particularly strong play together.',state.combo.palette)}${duo(state.combo)}</section>`:'',gem=state.gem?`<section class='v189Section'>${heading('Hidden gem','An owned card not used in a deck','A card already in your Collection that deserves another look.',identity(state.gem))}<div class='v189Gem'>${spotlightButton(state.gem,'v189DuoCard','Unused')}<div><h3>${html(state.gem.printed_name||state.gem.name)}</h3><p>${html((state.gem.oracle_text||'This card is currently unused. Open it to inspect the exact printing and consider it for a compatible deck.').split('\n')[0])}</p></div></div></section>`:'',build=state.buildCards.length?`<section class='v189Section'>${heading('You could build',`${paletteName(state.synergy?.palette||new Set())} ${state.synergy?.theme||'collection'} shell`,'A selectable deck seed built only from color-compatible cards in your Collection.',state.synergy?.palette)}<div class='v189BuildStrip'>${state.buildCards.map(card=>spotlightButton(card,'v189BuildCard','')).join('')}</div><button class='btn accent wide section' type='button' onclick='openV189Builder()'>Choose ${state.buildCards.length} suggested cards →</button></section>`:'',missing=state.partial?`<section class='v189Section'>${heading('Missing link',state.partial.title,'You own one piece of a known two-card combo.')}<div class='v189Why'><b>You own:</b> ${html(state.partial.owned.printed_name||state.partial.owned.name)}<br><b>Missing:</b> ${html(state.partial.missing)}<br>${html(state.partial.why)}</div></section>`:'';body.className='';body.innerHTML=`<div class='v187DiscoverLead'><span class='v181Kind'>Updated daily</span><h1>Today’s discovery from your collection</h1><p class='muted'>One strong synergy, a two-card combo when available, an unused gem, and a deck idea. Tap artwork to inspect it.</p></div>${synergy}${combo}${gem}${build}${missing}`}
  function builderRow(card,index,state){const selected=state.selected.has(index),image=art(card),name=card.printed_name||card.name,quantity=state.quantities[index]||1;return `<div class='v187BuilderCard ${selected?'':'off'}'><button class='v187BuilderArt' type='button' ${image?`onclick="openDiscoverSpotlight('${attr(enc(image))}','${attr(enc(name))}')"`:''}>${image?`<img src='${attr(card.image||image)}' alt='${attr(name)}'>`:''}</button><div class='v187BuilderInfo'><b>${html(name)}</b><span>${html(paletteName(identity(card)))} · Suggested card</span><small>${html((card.type_line||'Card').split('—')[0].trim())}</small></div><div class='v187BuilderControls'><button class='v187Toggle' type='button' onclick='toggleV189Card(${index})'>${selected?'✓':'＋'}</button><div class='v187Qty'><button type='button' onclick='qtyV189Card(${index},-1)'>−</button><b>${quantity}</b><button type='button' onclick='qtyV189Card(${index},1)'>＋</button></div></div></div>`}
  function paintBuilder(){const state=window._v189Builder,title=document.getElementById('sheetTitle'),body=document.getElementById('sheetBody'),modal=document.getElementById('modal');if(!state||!title||!body||!modal)return;title.textContent='Build from this discovery';body.innerHTML=`<div class='v189BuilderSummary'><b>${html(state.idea.title)}</b><span>All suggestions obey ${html(paletteName(state.idea.palette))} color identity. Tap artwork to enlarge it.</span></div><div class='v187BuilderList'>${state.cards.map((card,index)=>builderRow(card,index,state)).join('')}</div><label class='section'>Deck name<input id='v189DeckName' class='input' value='${attr(state.idea.title)}'></label><label>Format<select id='v189DeckFormat' class='input'><option>Commander</option><option>Pauper</option><option>Standard</option><option>Modern</option><option>Pioneer</option><option>Legacy</option><option>Vintage</option><option selected>Casual / Kitchen Table</option></select></label><button class='btn accent wide section' type='button' onclick='createV189Deck()'>Create deck with selected cards</button>`;modal.classList.add('on')}
@@ -2593,7 +2593,7 @@ document.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{if(window.v123E
 })();
 </script>
 <script id="v129-update-runtime">
-if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{const registration=await navigator.serviceWorker.register('./sw.js?v=191',{updateViaCache:'none'});await registration.update()}catch(error){console.warn('HexVault update check unavailable',error)}});
+if('serviceWorker' in navigator)window.addEventListener('load',async()=>{try{const registration=await navigator.serviceWorker.register('./sw.js?v=192',{updateViaCache:'none'});await registration.update()}catch(error){console.warn('HexVault update check unavailable',error)}});
 </script>
 <script id="v189-final-runtime-wiring">
 (()=>{
@@ -4260,4 +4260,142 @@ body:has(#life.on){overflow:hidden!important;overscroll-behavior:none!important}
 </script>
 <script id="v191-absolute-final-runtime">
 (()=>{const install=()=>{if(typeof window.v191ScanCameraCard==='function')window.scanCameraCard=window.v191ScanCameraCard;window.HEXVAULT_BUILD=191;document.querySelectorAll('.settingsRow small').forEach(node=>{if(/Version \d+/.test(node.textContent||''))node.textContent=(node.textContent||'').replace(/Version \d+[^·]*/,'Version 191 ')});document.querySelectorAll('.settingsRow .muted').forEach(node=>{if(/^v\d+$/.test((node.textContent||'').trim()))node.textContent='v191'})};window.addEventListener('load',install);if(document.readyState==='complete')install()})();
+</script>
+<style id="v192-final-ui-stability">
+/* The wheel is a real vector ring in v192. Old conic-gradient layers are disabled. */
+#colorWheel{position:relative;background:transparent!important;filter:none!important;isolation:isolate;overflow:visible}
+#colorWheel:after{display:none!important}
+#colorWheel .v192ColorWheelSvg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:auto;filter:drop-shadow(0 0 7px #765bca55)}
+#colorWheel .v192ColorTrack,#colorWheel .v192ColorSegment{fill:none;stroke-width:13;transform:rotate(-90deg);transform-origin:50% 50%}
+#colorWheel .v192ColorTrack{stroke:#252b38}
+#colorWheel .v192ColorSegment{stroke-linecap:butt;pointer-events:stroke;cursor:pointer;transition:stroke-width .15s ease,filter .15s ease}
+#colorWheel .v192ColorSegment:hover,#colorWheel .v192ColorSegment:focus{stroke-width:17;filter:brightness(1.22)}
+#colorWheel>div{position:relative;z-index:2}
+
+/* Deck ownership remains functional internally, but is no longer a visual status label. */
+#deckList .deckStateBadge,#deckList .deckStateRow,#deckEditor .deckStateBadge,#deckEditor .deckStateRow{display:none!important}
+
+.globalSearchResult{cursor:pointer;transition:border-color .16s ease,background .16s ease,transform .16s ease}
+.globalSearchResult:active{transform:scale(.992)}
+@media(hover:hover){.globalSearchResult:hover{border-color:#654c91;background:#151a28}}
+.v192CardInfo{display:grid;grid-template-columns:minmax(116px,36%) minmax(0,1fr);gap:14px;align-items:start}
+.v192CardInfoArt{border:0;background:transparent;padding:0;cursor:zoom-in}
+.v192CardInfoArt img{display:block;width:100%;aspect-ratio:488/680;object-fit:contain;border-radius:11px;background:#070a10;box-shadow:0 12px 30px #0008}
+.v192CardInfo h3{margin:0 0 6px;font-size:20px;line-height:1.2}.v192CardInfo p{margin:4px 0;color:var(--muted);font-size:11px;line-height:1.45}
+.v192Oracle{white-space:pre-line;margin-top:14px;padding:13px;border:1px solid var(--line);border-radius:15px;background:#0d131e;line-height:1.55;color:#e9edf7;font-size:13px}
+.v192Legal{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.v192Legal span{padding:5px 8px;border:1px solid #33405a;border-radius:999px;background:#111827;color:#bec8dc;font-size:9px;text-transform:capitalize}
+.v192CardActions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px}.v192CardActions .btn{min-width:0;padding-inline:7px}
+@media(max-width:390px){.v192CardInfo{grid-template-columns:102px minmax(0,1fr)}.v192CardActions{grid-template-columns:1fr}.v192CardInfo h3{font-size:17px}}
+</style>
+<script id="v192-absolute-final-runtime">
+(()=>{
+ const clean=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+ const attr=value=>clean(value).replace(/`/g,'&#96;');
+ const quantity=card=>Math.max(1,Number(card?.qty)||1);
+ const fullImage=card=>card?.image_uris?.large||card?.image_uris?.png||card?.card_faces?.[0]?.image_uris?.large||card?.card_faces?.[0]?.image_uris?.png||card?.image_large||card?.image_uris?.normal||card?.card_faces?.[0]?.image_uris?.normal||card?.image||'';
+
+ /* Keep one Discover implementation authoritative even when an old delayed renderer fires. */
+ let discoverRepairing=false,discoverRepairTimer=0;
+ function discoverIsCurrent(){
+  const body=document.getElementById('discoverBody');
+  if(!body)return true;
+  if(body.querySelector('.v187DiscoverLead'))return true;
+  const cards=(()=>{try{return Array.isArray(collection)?collection:[]}catch(error){return []}})();
+  return !cards.length&&body.classList.contains('empty')&&/No discoveries yet/i.test(body.textContent||'');
+ }
+ function renderCurrentDiscover(){
+  if(discoverRepairing||typeof window.renderV189Discover!=='function')return;
+  discoverRepairing=true;
+  try{window.renderV189Discover()}finally{queueMicrotask(()=>{discoverRepairing=false})}
+ }
+ function ensureCurrentDiscover(){
+  if(!document.getElementById('discover')?.classList.contains('on')||discoverIsCurrent())return;
+  clearTimeout(discoverRepairTimer);discoverRepairTimer=setTimeout(renderCurrentDiscover,0);
+ }
+ function bindDiscoverAliases(){
+  if(typeof window.renderV189Discover!=='function')return;
+  ['renderDiscover','renderDiscoverDay','renderV181Discover','renderV184Discover','renderV186Discover','renderV187Discover','renderV188Discover'].forEach(name=>window[name]=window.renderV189Discover);
+ }
+ const discoverBody=document.getElementById('discoverBody');
+ if(discoverBody)new MutationObserver(ensureCurrentDiscover).observe(discoverBody,{childList:true,subtree:true});
+
+ /* Remove only the user-facing Assembled state; physical allocation data remains intact. */
+ function stripAssembledLabels(){
+  document.querySelectorAll('#deckList .green,#deckEditor .green').forEach(node=>{
+   if((node.textContent||'').trim()!=='Assembled')return;
+   const previous=node.previousSibling;if(previous?.nodeType===Node.TEXT_NODE)previous.textContent=(previous.textContent||'').replace(/\s*·\s*$/,'');
+   node.remove();
+  });
+  document.querySelectorAll('#deckList .deckStateBadge,#deckList .deckStateRow,#deckEditor .deckStateBadge,#deckEditor .deckStateRow').forEach(node=>node.remove());
+ }
+ const deckList=document.getElementById('deckList');if(deckList)new MutationObserver(()=>queueMicrotask(stripAssembledLabels)).observe(deckList,{childList:true,subtree:true});
+ const deckEditor=document.getElementById('deckEditor');if(deckEditor)new MutationObserver(()=>queueMicrotask(stripAssembledLabels)).observe(deckEditor,{childList:true,subtree:true});
+
+ /* A clean SVG ring avoids conic-gradient seams and stray color pixels. */
+ const wheelColors={W:'#f2ead5',U:'#2d92d0',B:'#5a466f',R:'#d55345',G:'#45a56b',M:'#d2ad4f',C:'#8893a3'};
+ function colorBucket(card){
+  const colors=Array.isArray(card?.colors)?card.colors.filter(Boolean):[];
+  if(colors.length===1&&wheelColors[colors[0]])return colors[0];
+  if(colors.length>1)return 'M';
+  return 'C';
+ }
+ window.openCollectionColorV192=function(key){
+  const base=typeof resetFilterObject==='function'?resetFilterObject():{color:'all',colors:[],combo:'all',type:'all',subtype:'all',mv:'all',rarity:'all',set:'all',lang:'all',finish:'all',legality:'all',trade:'all'};
+  collectionFilters={...base,color:'all',colors:[key]};
+  try{collectionView='cards'}catch(error){}
+  window.go?.('collection');
+  if(typeof window.setCollectionDisplay==='function')window.setCollectionDisplay('cards');else window.renderCollection?.();
+ };
+ function paintVectorWheel(){
+  const wheel=document.getElementById('colorWheel');if(!wheel)return;
+  let svg=wheel.querySelector('.v192ColorWheelSvg');
+  if(!svg){
+   svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('v192ColorWheelSvg');svg.setAttribute('viewBox','0 0 100 100');svg.setAttribute('aria-hidden','true');
+   const track=document.createElementNS('http://www.w3.org/2000/svg','circle');track.classList.add('v192ColorTrack');track.setAttribute('cx','50');track.setAttribute('cy','50');track.setAttribute('r','41');svg.appendChild(track);wheel.prepend(svg);
+  }
+  svg.querySelectorAll('.v192ColorSegment').forEach(segment=>segment.remove());
+  const counts={W:0,U:0,B:0,R:0,G:0,M:0,C:0},cards=(()=>{try{return Array.isArray(collection)?collection:[]}catch(error){return []}})();cards.forEach(card=>counts[colorBucket(card)]+=quantity(card));
+  const total=Object.values(counts).reduce((sum,count)=>sum+count,0),circumference=2*Math.PI*41;let offset=0;
+  for(const key of ['W','U','B','R','G','M','C']){
+   if(!counts[key]||!total)continue;
+   const length=counts[key]/total*circumference,circle=document.createElementNS('http://www.w3.org/2000/svg','circle');circle.classList.add('v192ColorSegment');circle.setAttribute('cx','50');circle.setAttribute('cy','50');circle.setAttribute('r','41');circle.setAttribute('stroke',wheelColors[key]);circle.setAttribute('stroke-dasharray',`${length} ${circumference-length}`);circle.setAttribute('stroke-dashoffset',String(-offset));circle.setAttribute('tabindex','0');circle.setAttribute('role','button');circle.setAttribute('aria-label',`Show ${key==='W'?'white':key==='U'?'blue':key==='B'?'black':key==='R'?'red':key==='G'?'green':key==='M'?'multicolor':'colorless'} cards`);circle.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();window.openCollectionColorV192(key)});circle.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopPropagation();window.openCollectionColorV192(key)}});svg.appendChild(circle);offset+=length;
+  }
+  wheel.dataset.hasColors=total?'true':'false';
+ }
+
+ /* Tapping a search result opens readable card information; action buttons remain independent. */
+ window.openSearchCardInfoV192=function(card){
+  if(!card)return;window._v192SearchCard=card;
+  const image=fullImage(card),faces=card.card_faces||[],oracle=card.oracle_text||faces.map(face=>face.oracle_text).filter(Boolean).join('\n\n'),printed=card.printed_text||faces.map(face=>face.printed_text).filter(Boolean).join('\n\n'),rules=printed||oracle||'No rules text.',legal=Object.entries(card.legalities||{}).filter(([,value])=>value==='legal'||value==='restricted').slice(0,10);
+  const title=document.getElementById('sheetTitle'),body=document.getElementById('sheetBody'),modal=document.getElementById('modal');if(!title||!body||!modal)return;
+  title.textContent=card.printed_name||card.name||'Card details';
+  body.innerHTML=`<div class='v192CardInfo'>${image?`<button class='v192CardInfoArt' type='button' onclick="zoomCard('${attr(image)}')"><img src='${attr(image)}' alt='${attr(card.printed_name||card.name||'Card')}'></button>`:''}<div><h3>${clean(card.printed_name||card.name||'Card')}</h3>${card.printed_name&&card.printed_name!==card.name?`<p>${clean(card.name)} · English name</p>`:''}<p>${clean(card.type_line||faces.map(face=>face.type_line).filter(Boolean).join(' // ')||'')}</p><p>${clean(card.set_name||card.set||'')} ${card.set?`· ${clean(String(card.set).toUpperCase())}`:''}${card.collector_number?` #${clean(card.collector_number)}`:''}${card.lang?` · ${clean(String(card.lang).toUpperCase())}`:''}</p><p>${card.mana_cost?`Mana cost ${clean(card.mana_cost)} · `:''}Mana value ${clean(card.cmc??card.mana_value??0)}</p></div></div><div class='v192Oracle'>${clean(rules)}</div>${legal.length?`<div class='v192Legal'>${legal.map(([format,status])=>`<span>${clean(format.replaceAll('_',' '))}${status==='restricted'?' · restricted':''}</span>`).join('')}</div>`:''}<div class='v192CardActions'><button class='btn accent' type='button' onclick='addV192SearchCardToCollection()'>＋ Collection</button><button class='btn' type='button' onclick='addV192SearchCardToWishlist()'>♡ Wishlist</button><button class='btn' type='button' onclick='addV192SearchCardToDeck()'>♢ Deck</button></div>`;
+  modal.classList.add('on');
+ };
+ window.addV192SearchCardToCollection=()=>{const card=window._v192SearchCard;if(card&&typeof window.openCollectionPrintingPicker==='function')window.openCollectionPrintingPicker(card)};
+ window.addV192SearchCardToWishlist=()=>{const card=window._v192SearchCard;if(card&&typeof window.globalAddWishlist==='function')window.globalAddWishlist(JSON.stringify({oracle_id:card.oracle_id,name:card.name,image:fullImage(card),type_line:card.type_line||''}))};
+ window.addV192SearchCardToDeck=()=>{const card=window._v192SearchCard;if(card&&typeof window.globalAddToDeck==='function')window.globalAddToDeck(JSON.stringify(card))};
+ const searchResults=document.getElementById('globalCardResults');
+ function hideLateSearchSuggestions(){const box=document.getElementById('globalCardSuggestions');if(box){box.classList.remove('on');box.innerHTML=''}}
+ const globalSearchButton=document.querySelector('#cardsearch .searchbox button');
+ if(globalSearchButton)globalSearchButton.addEventListener('click',()=>[0,80,220,500].forEach(delay=>setTimeout(hideLateSearchSuggestions,delay)),true);
+ if(searchResults)new MutationObserver(()=>{if(searchResults.querySelector('.globalSearchResult'))[0,120,360].forEach(delay=>setTimeout(hideLateSearchSuggestions,delay))}).observe(searchResults,{childList:true});
+ if(searchResults)searchResults.addEventListener('click',event=>{
+  if(event.target.closest('.globalSearchActions'))return;
+  const row=event.target.closest('.globalSearchResult');if(!row)return;
+  const rows=[...searchResults.querySelectorAll('.globalSearchResult')],card=(window.avVisibleSearchCards||[])[rows.indexOf(row)];if(card)window.openSearchCardInfoV192(card);
+ });
+
+ const previousGo=window.go;window.go=function(id,element){const result=previousGo?.apply(this,arguments);if(id==='discover'){bindDiscoverAliases();[0,40,120,260,480].forEach(delay=>setTimeout(renderCurrentDiscover,delay))}if(id==='home')[0,80,180].forEach(delay=>setTimeout(paintVectorWheel,delay));if(id==='decks')[0,60,180].forEach(delay=>setTimeout(stripAssembledLabels,delay));return result};
+ const previousHome=window.refreshHome;window.refreshHome=function(){const result=previousHome?.apply(this,arguments);requestAnimationFrame(paintVectorWheel);setTimeout(paintVectorWheel,120);return result};
+ const previousDecks=window.renderDecks;window.renderDecks=function(){const result=previousDecks?.apply(this,arguments);requestAnimationFrame(stripAssembledLabels);return result};
+
+ function install(){
+  bindDiscoverAliases();if(typeof window.v191ScanCameraCard==='function')window.scanCameraCard=window.v191ScanCameraCard;
+  window.HEXVAULT_BUILD=192;paintVectorWheel();stripAssembledLabels();
+  document.querySelectorAll('.settingsRow small').forEach(node=>{if(/Version \d+/.test(node.textContent||''))node.textContent=(node.textContent||'').replace(/Version \d+[^·]*/,'Version 192 ')});document.querySelectorAll('.settingsRow .muted').forEach(node=>{if(/^v\d+$/.test((node.textContent||'').trim()))node.textContent='v192'});
+  if(document.getElementById('discover')?.classList.contains('on'))[0,80,220,450].forEach(delay=>setTimeout(renderCurrentDiscover,delay));
+ }
+ window.addEventListener('load',install);if(document.readyState==='complete')install();else document.addEventListener('DOMContentLoaded',install,{once:true});
+})();
 </script>
