@@ -1,4 +1,4 @@
-HEXVAULT v192 — VERCEL READY
+HEXVAULT v193 — VERCEL READY
 
 Deploy:
 1. Upload/import this project to Vercel (or push it to GitHub and import the repo).
@@ -22,7 +22,7 @@ Optional/required environment variables:
 
 After changing environment variables, redeploy in Vercel.
 If Judge fails, open Vercel Logs and inspect /api/judge. HexVault reports missing credit, rejected keys, and rate limits separately instead of only saying "Judge unavailable".
-HEXVAULT v192 — SCANNER SETUP
+HEXVAULT v193 — SCANNER SETUP
 
 Required environment variable:
 OPENAI_API_KEY = your OpenAI Platform API key
@@ -34,4 +34,4 @@ The scanner sends the sharpest image from a short camera burst plus an enhanced 
 
 HexVault searches the current Scryfall catalog and all multilingual printings. The optional offline database stores searchable card-name metadata on the device; HD artwork remains online and is cached as needed so the app does not become an enormous download.
 
-After changing an environment variable, redeploy the production deployment. Then open the production URL directly, confirm Settings shows v192, and refresh/reinstall the PWA if an older cached version remains.
+After changing an environment variable, redeploy the production deployment. Then open the production URL directly, confirm Settings shows v193, and refresh/reinstall the PWA if an older cached version remains.
